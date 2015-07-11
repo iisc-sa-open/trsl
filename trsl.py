@@ -51,8 +51,8 @@ class Trsl():
 	def process_node(self, current_node):
 		"""
 		"""
-
 		global logging
+
 		best_question_data = {
 			'belongs_to_indices': [],
 			'not_belongs_to_indices': [],
@@ -91,25 +91,27 @@ class Trsl():
 							current_not_belongs_to_distribution[target_word] += 1.0
 						except KeyError:
 							current_not_belongs_to_distribution[target_word] = 1.0
+				belongs_to_frequency_sum = sum(current_belongs_to_distribution.values())
 				for key in current_belongs_to_distribution.keys():
 					frequency = current_belongs_to_distribution[key]
-					probability = frequency/len(current_node.ngram_fragment_row_indices)
+					probability = frequency/belongs_to_frequency_sum
 					probability_of_info_gain = probability * math.log(probability,2)
 					current_belongs_to_distribution[key] = probability
 					current_belongs_to_distribution_entropy += -probability_of_info_gain
 
+				not_belongs_to_frequency_sum = sum(current_not_belongs_to_distribution.values())
 				for key in current_not_belongs_to_distribution.keys():
 					frequency = current_not_belongs_to_distribution[key]
-					probability = frequency/len(current_node.ngram_fragment_row_indices)
+					probability = frequency/not_belongs_to_frequency_sum
 					probability_of_info_gain = probability * math.log(probability,2)
 					current_not_belongs_to_distribution[key] = probability
 					current_not_belongs_to_distribution_entropy += -probability_of_info_gain
 
 				belongs_to_probability = (
-					len(current_belongs_to_indices)/len(current_node.ngram_fragment_row_indices)
+					float(len(current_belongs_to_indices))/len(current_node.ngram_fragment_row_indices)
 				)
 				not_belongs_to_probability = ( 
-					len(current_not_belongs_to_indices)/len(current_node.ngram_fragment_row_indices)
+					float(len(current_not_belongs_to_indices))/len(current_node.ngram_fragment_row_indices)
 				)
 				current_average_conditional_entropy = (belongs_to_probability *
 					current_belongs_to_distribution_entropy + not_belongs_to_probability *
@@ -164,10 +166,7 @@ class Trsl():
 		"""
 
 		return [
-			set(["the","an","as","has","a"]),
-			set(["quite","own","them","good"]),
-			set(["you","have","he","for","with"]),
-			set(["not","own","loss","event"])
+			set(["the","for","in","at","a"]),
 		]
 
 def init_logger():
