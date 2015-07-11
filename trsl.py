@@ -20,7 +20,7 @@ class Trsl():
 
 	def train(self, filename):
 		"""
-		todo : make sure the question is unique from the parent all the way upto the root 
+		todo : make sure the question is unique from the parent all the way upto the root
 		"""
 		self.ngram_table, self.vocabulary_set = preprocess.preprocess(filename, self.ngram_window_size)
 		self.set_root_state()
@@ -34,9 +34,9 @@ class Trsl():
 		self.root.distribution = {}
 		for index in range(0,len(self.ngram_table)):
 			try:
-				self.root.distribution[self.ngram_table[index][self.ngram_window_size-1]] += 1.0
+				self.root.distribution[self.ngram_table[index, self.ngram_window_size-1]] += 1.0
 			except KeyError:
-				self.root.distribution[self.ngram_table[index][self.ngram_window_size-1]] = 1.0
+				self.root.distribution[self.ngram_table[index, self.ngram_window_size-1]] = 1.0
 
 		self.root.ngram_fragment_row_indices = [x for x in range(0, len(self.ngram_table))] # todo check if computes through entrie ds or not
 
@@ -47,7 +47,7 @@ class Trsl():
 			self.root.distribution[key] = probability
 			self.root.entropy += -probability_of_info_gain
 
-		
+
 	def process_node(self, current_node):
 		"""
 		"""
@@ -77,8 +77,8 @@ class Trsl():
 				current_belongs_to_distribution_entropy = 0
 				current_not_belongs_to_distribution_entropy = 0
 				for table_index in current_node.ngram_fragment_row_indices:
-					predictor_word = self.ngram_table[table_index][Xi]
-					target_word = self.ngram_table[table_index][self.ngram_window_size-1]
+					predictor_word = self.ngram_table[table_index, Xi]
+					target_word = self.ngram_table[table_index, self.ngram_window_size-1]
 					if predictor_word in Si:
 						current_belongs_to_indices.append(table_index)
 						try:
@@ -110,7 +110,7 @@ class Trsl():
 				belongs_to_probability = (
 					float(len(current_belongs_to_indices))/len(current_node.ngram_fragment_row_indices)
 				)
-				not_belongs_to_probability = ( 
+				not_belongs_to_probability = (
 					float(len(current_not_belongs_to_indices))/len(current_node.ngram_fragment_row_indices)
 				)
 				current_average_conditional_entropy = (belongs_to_probability *
@@ -162,7 +162,7 @@ class Trsl():
 			calculate relative distance between words
 			cluster words into n categories
 			todo : make no of sets configurable if possible
-			todo : 
+			todo :
 		"""
 
 		return [

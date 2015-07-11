@@ -1,5 +1,6 @@
 from nltk.tokenize import RegexpTokenizer
 import numpy as np
+from ngram_table import NGramTable
 
 
 def preprocess(filename, ngram_window_size):
@@ -15,7 +16,6 @@ def preprocess(filename, ngram_window_size):
     corpus = open(filename, "r").read()
     tokenizer = RegexpTokenizer(r'\w+(\'\w+)?')
     tokenized_corpus = tokenizer.tokenize(corpus.lower())
-    count = max(0, len(tokenized_corpus) - ngram_window_size + 1)
-    ngram_table = np.array([list(tokenized_corpus[i:i+ngram_window_size]) for i in range(count)], np.object)
+    ngram_table = NGramTable(tokenized_corpus, ngram_window_size)
     vocabulary_set = set(tokenized_corpus)
     return (ngram_table, vocabulary_set)
