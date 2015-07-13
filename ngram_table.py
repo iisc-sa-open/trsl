@@ -1,28 +1,35 @@
-class NGramTable():
-	"""
-	"""
+#! /usr/bin/env python2
+"""
+    NGramTable implemented
+    todo : implement queries in ngram_table within the class itself
+"""
 
-	def __init__(self,arr,n):
 
-		self.array = arr
-		self.ngram_window_size = n
+class NGramTable(object):
+    """
+        Creates an abstraction over an
+        array of objects to access them
+        as if it were a stream of ngrams
+        in table with rows and columns.
+        Arguments:
+            self.array             ->   Array of objects to access
+                                        as an ngram
+            self.ngram_window_size ->   The n in the ngram :D
+    """
 
-	def __len__(self):
+    def __init__(self, arr, n):
 
-		return len(self.array) - (self.ngram_window_size - 1)
+        self.array = arr
+        self.ngram_window_size = n
 
-	def __getitem__(self,tup):
+    def __len__(self):
 
-		row, col = tup
-		if row < (len(self.array) - (self.ngram_window_size - 1)) and col < self.ngram_window_size:
-			return self.array[row + col]
-		else:
-			raise KeyError
+        return len(self.array) - (self.ngram_window_size - 1)
 
-	def __setitem__(self,tup,item):
+    def __getitem__(self, tup):
 
-		row, col = tup
-		if row < (len(self.array) - (self.ngram_window_size - 1)) and col < self.ngram_window_size:
-			self.array[row + col] = item
-		else:
-			raise KeyError
+        row, col = tup
+        if row < (len(self.array) - (self.ngram_window_size - 1)) and col < self.ngram_window_size:
+            return self.array[row + col]
+        else:
+            raise KeyError

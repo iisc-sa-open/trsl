@@ -1,5 +1,8 @@
+"""
+    Preprocesses the data for trsl construction
+"""
+
 from nltk.tokenize import RegexpTokenizer
-import numpy as np
 from ngram_table import NGramTable
 
 

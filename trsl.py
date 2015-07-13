@@ -1,18 +1,27 @@
 #! /usr/bin/env/python2
 """
+    Tree Based Statistical language Model
+    to be used in tandem with an acoustic model
+    for speech recognition
 """
 
 
 from collections import Counter   # todo : remove this
 from node import Node
+from question import Question
+import logging
+import math
 import preprocess   # todo check for namespace pollution
 import Queue
-import math
-import logging
 
 
-class Trsl():
+class Trsl(object):
     """
+        Trsl class implements a tree based statistical language model
+        Arguments:
+            self.reduction_threshold -> min reduction in entropy for a question
+                                        at a node to further grow the tree
+            self.ngram_window_size   -> no of predictor variables (inclusive of target)
     """
 
     def __init__(self, ngram_window_size=5, reduction_threshold=0.15):
@@ -30,8 +39,9 @@ class Trsl():
 
     def train(self, filename):
         """
-            todo : make sure the question is unique
-            from the parent all the way upto the root
+            Given a filename(containing a training corpus), build a decision tree
+            which can be accessed through self.root
+
         """
 
         self.ngram_table, self.vocabulary_set = preprocess.preprocess(
@@ -40,12 +50,20 @@ class Trsl():
         self.set_root_state()
         self.node_queue.put(self.root)
         self.word_sets = self.build_sets()
-        while(not self.node_queue.empty()):
+        while not self.node_queue.empty():
             self.process_node(self.node_queue.get())
-        print("No of Nodes:", self.no_of_nodes)
+        logging.info("Total no of Nodes:"+ str(self.no_of_nodes))
 
     def set_root_state(self):
-
+        """
+            Calculates the probability distribution
+            of the target variable values at the root node
+            in the training text and also
+            the entropy of this distribution.
+            Also, adds all the row indices in the ngram table
+            into row_fragment_indices since the data is not
+            fragmented yet.
+        """
         self.root.dist = {}
         for index in range(0, len(self.ngram_table)):
             try:
@@ -69,139 +87,130 @@ class Trsl():
             self.root.dist[key] = probability
             self.root.entropy += -probability_of_info_gain
 
-    def process_node(self, current_node):
+    def process_node(self, curr_node):
         """
-            Used to process current_node by computing best reduction
+            Used to process curr_node by computing best reduction
             and choosing to create children nodes or not based on
-            reduction_threshold
+            self.reduction_threshold
 
             Naming Convention:
                 *    nb  -> Not belongs the the selected set
                 *    b   -> Belongs to the selected set
-                *    Xi  -> Predictive variable index
-                *   Si  -> Set index
-                *   cnb -> current node not belongs to the selected set
-                *   cb  -> current node belongs to the set
+                *    Xi  -> Predictor variable index into the ngram table
+                *    Si  -> Set
+                *    cnb -> current node not belongs to the selected set
+                *    cb  -> current node belongs to the set
         """
 
         global logging
 
-        best_question_data = {
-            'b_indices': [],
-            'nb_indices': [],
-            'b_dist': {},
-            'nb_dist': {},
-            'b_dist_entropy': 0,
-            'nb_dist_entropy': 0,
-            'reduction': 0,
-            'set': set(),
-            'predictor_variable_index': 0
-        }
+        best_question = Question()
         self.no_of_nodes += 1
         for Xi in range(0, self.ngram_window_size-1):
             for Si in self.word_sets:
-                if self.question_already_asked(current_node, Xi, Si):
+                if self.question_already_asked(curr_node, Xi, Si):
                     continue
-                cb_dist = {}
-                cnb_dist = {}
-                current_reduction = 0
-                cb_indices = []
-                cnb_indices = []
-                cb_dist_entropy = 0
-                cnb_dist_entropy = 0
-                for table_index in current_node.row_fragment_indices:
+                curr_question = Question()
+                for table_index in curr_node.row_fragment_indices:
                     predictor_word = self.ngram_table[table_index, Xi]
                     target_word = self.ngram_table[
                         table_index, self.ngram_window_size-1
                     ]
                     if predictor_word in Si:
-                        cb_indices.append(table_index)
+                        curr_question.b_indices.append(table_index)
                         try:
-                            cb_dist[target_word] += 1.0
+                            curr_question.b_dist[target_word] += 1.0
                         except KeyError:
-                            cb_dist[target_word] = 1.0
+                            curr_question.b_dist[target_word] = 1.0
                     else:
-                        cnb_indices.append(table_index)
+                        curr_question.nb_indices.append(table_index)
                         try:
-                            cnb_dist[target_word] += 1.0
+                            curr_question.nb_dist[target_word] += 1.0
                         except KeyError:
-                            cnb_dist[target_word] = 1.0
-                b_frequency_sum = sum(cb_dist.values())
-                for key in cb_dist.keys():
-                    frequency = cb_dist[key]
+                            curr_question.nb_dist[target_word] = 1.0
+                b_frequency_sum = sum(curr_question.b_dist.values())
+                for key in curr_question.b_dist.keys():
+                    frequency = curr_question.b_dist[key]
                     probability = frequency/b_frequency_sum
                     probability_of_info_gain = (
                         probability * math.log(probability, 2)
                     )
-                    cb_dist[key] = probability
-                    cb_dist_entropy += -probability_of_info_gain
+                    curr_question.b_dist[key] = probability
+                    curr_question.b_dist_entropy += -probability_of_info_gain
 
-                nb_frequency_sum = sum(cnb_dist.values())
-                for key in cnb_dist.keys():
-                    frequency = cnb_dist[key]
+                nb_frequency_sum = sum(curr_question.nb_dist.values())
+                for key in curr_question.nb_dist.keys():
+                    frequency = curr_question.nb_dist[key]
                     probability = frequency/nb_frequency_sum
                     probability_of_info_gain = (
                         probability * math.log(probability, 2)
                     )
-                    cnb_dist[key] = probability
-                    cnb_dist_entropy += -probability_of_info_gain
-                size_row_fragment_indices = (
-                    len(current_node.row_fragment_indices)
+                    curr_question.nb_dist[key] = probability
+                    curr_question.nb_dist_entropy += -probability_of_info_gain
+                size_row_fragment = (
+                    len(curr_node.row_fragment_indices)
                 )
-                b_probability = (
-                    float(len(cb_indices))/size_row_fragment_indices
+                curr_question.b_probability = (
+                    float(len(curr_question.b_indices))/size_row_fragment
                 )
-                nb_probability = (
-                    float(len(cnb_indices))/size_row_fragment_indices
+                curr_question.nb_probability = (
+                    float(len(curr_question.nb_indices))/size_row_fragment
                 )
-                current_average_conditional_entropy = (
-                    b_probability * cb_dist_entropy + nb_probability
-                    * cnb_dist_entropy
+                curr_question.avg_conditional_entropy = (
+                    (curr_question.b_probability
+                        * curr_question.b_dist_entropy)
+                    +
+                    (curr_question.nb_probability
+                        * curr_question.nb_dist_entropy)
                 )
-                current_reduction = (
-                    current_node.entropy - current_average_conditional_entropy
+                curr_question.reduction = (
+                    curr_node.entropy - curr_question.avg_conditional_entropy
                 )
-                #print(Xi,Si,current_reduction)
-                if best_question_data['reduction'] < current_reduction:
-                    best_question_data['reduction'] = current_reduction
-                    best_question_data['b_indices'] = cb_indices
-                    best_question_data['b_dist'] = cb_dist
-                    best_question_data['b_dist_entropy'] = (
-                        cb_dist_entropy
-                    )
-                    best_question_data['nb_indices'] = cnb_indices
-                    best_question_data['nb_dist'] = cnb_dist
-                    best_question_data['nb_dist_entropy'] = (
-                        cnb_dist_entropy
-                    )
-                    best_question_data['set'] = Si
-                    best_question_data['predictor_variable_index'] = Xi
+                logging.debug(
+                    "Predictor var: " + str(Xi)
+                    + " Set: " + str(Si)
+                    + " Reduction: " + str(curr_question.reduction)
+                )
+                if best_question.reduction < curr_question.reduction:
+                    best_question = curr_question
 
-        if best_question_data['reduction'] > self.reduction_threshold:
-            current_node.set = best_question_data['set']
-            current_node.predictor_variable_index = best_question_data['predictor_variable_index']
-            current_node.lchild = Node()
-            current_node.lchild.row_fragment_indices = best_question_data['b_indices']
-            current_node.lchild.entropy = best_question_data['b_dist_entropy']
-            current_node.lchild.dist = best_question_data['b_dist']
-            current_node.rchild = Node()
-            current_node.rchild.row_fragment_indices = best_question_data['nb_indices']
-            current_node.rchild.entropy = best_question_data['nb_dist_entropy']
-            current_node.rchild.dist = best_question_data['nb_dist']
-            self.node_queue.put(current_node.lchild)
-            self.node_queue.put(current_node.rchild)
-            current_node.lchild.parent = current_node
-            current_node.rchild.parent = current_node
+        if best_question.reduction > self.reduction_threshold:
+            curr_node.set = best_question.set
+            curr_node.predictor_variable_index = (
+                best_question.predictor_variable_index
+            )
+            curr_node.lchild = Node()
+            curr_node.lchild.row_fragment_indices = best_question.b_indices
+            curr_node.lchild.entropy = best_question.b_dist_entropy
+            curr_node.lchild.dist = best_question.b_dist
+            curr_node.rchild = Node()
+            curr_node.rchild.row_fragment_indices = best_question.nb_indices
+            curr_node.rchild.entropy = best_question.nb_dist_entropy
+            curr_node.rchild.dist = best_question.nb_dist
+            self.node_queue.put(curr_node.lchild)
+            self.node_queue.put(curr_node.rchild)
+            curr_node.lchild.parent = curr_node
+            curr_node.rchild.parent = curr_node
 
         else:
             logging.info(
                 "Leaf Node reached, Top Probability dist:%s",
-                dict(Counter(current_node.dist).most_common(5))
+                dict(Counter(curr_node.dist).most_common(5))
             )
 
-    def question_already_asked(self, current_node, Xi, Si):
+    def question_already_asked(self, curr_node, Xi, Si):
+        """
+            Checks if the same question has been asked
+            (same set and predictor variable index)
+            in the parent and the parent's parent and so on
+            till the root.
 
-        parent = current_node.parent
+            The rationale here is that asking the same question again
+            on a subset of the data the question was asked before
+            would cause all the data to go down one one of YES or NO path
+            which is unnecessary computation.
+        """
+        parent = curr_node.parent
         while parent is not None:
             if parent.set == Si and parent.predictor_variable_index == Xi:
                 return True
@@ -212,21 +221,26 @@ class Trsl():
     def build_sets(self):
 
         """
-            calculate relative distance between words
-            cluster words into n categories
-            todo : make no of sets configurable if possible
-            todo :
+            This method is stubbed right now to return predetermined sets
+            We hope to build a system that returns sets built by clustering words
+            based on their semantic similarity and semantic relatedness in the given
+            training corpus.
+
+            todo : make no of sets and their size configurable if possible
         """
 
         return [
-            set(["the","for","in","at","a"])
-            #set(["that", "it", "as", "he", "for"]),
-            #set(["am", "only", "if", "little", "when"]),
-            #set(["and", "of", "a", "was", "in"]),
-            #set(["the", "to", "and", "of", "a"])
+            set(["the", "for", "in", "at", "a"])
         ]
 
     def predict(self, predictor_variable_list):
+        """
+            Given a list of predictor words, this method
+            returns the probability distribution of the
+            next words that could occur next.
+
+            todo: exception handling when predict is called before train
+        """
 
         if len(predictor_variable_list) != self.ngram_window_size-1:
             raise ValueError(
@@ -235,16 +249,18 @@ class Trsl():
             )
         temp = self.root
         steps = 0
-        while(True):
+        while True:
             if temp.rchild is not None:
+                # since the decision tree is  a full binary tree, both children exist
                 steps += 1
-                # since its a binary tree, both children exist
                 if predictor_variable_list[temp.predictor_variable_index] in temp.set:
                     print(
                         "LEVEL: %s, X%s = %s belongs to %s? YES"
                         % (
                             steps, temp.predictor_variable_index,
-                            predictor_variable_list[temp.predictor_variable_index],
+                            predictor_variable_list[
+                                temp.predictor_variable_index
+                            ],
                             temp.set
                         )
                     )
@@ -254,21 +270,12 @@ class Trsl():
                         "LEVEL: %s, X%s = %s belongs to %s? NO"
                         % (
                             steps, temp.predictor_variable_index,
-                            predictor_variable_list[temp.predictor_variable_index],
+                            predictor_variable_list[
+                                temp.predictor_variable_index
+                            ],
                             temp.set
                         )
                     )
                     temp = temp.rchild
             else:
                 return temp.dist
-
-
-def init_logger():
-    logger = logging.getLogger()
-    handler = logging.StreamHandler()
-    logging.basicConfig(filename='trsl.log', filemode='w', level=logging.INFO)
-    formatter = logging.Formatter(
-        '%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    logger.setLevel(logging.INFO)
