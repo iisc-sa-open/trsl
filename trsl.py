@@ -111,6 +111,8 @@ class Trsl(object):
                 if self.question_already_asked(curr_node, Xi, Si):
                     continue
                 curr_question = Question()
+                curr_question.set = Si
+                curr_question.predictor_variable_index = Xi
                 for table_index in curr_node.row_fragment_indices:
                     predictor_word = self.ngram_table[table_index, Xi]
                     target_word = self.ngram_table[
@@ -173,6 +175,7 @@ class Trsl(object):
                 )
                 if best_question.reduction < curr_question.reduction:
                     best_question = curr_question
+                    logging.debug("Best Question : "+str(best_question.set))
 
         if best_question.reduction > self.reduction_threshold:
             curr_node.set = best_question.set
