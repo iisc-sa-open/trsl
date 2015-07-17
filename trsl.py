@@ -9,10 +9,12 @@
 from collections import Counter   # todo : remove this
 from node import Node
 from question import Question
+import json
 import logging
 import math
 import preprocess   # todo check for namespace pollution
 import Queue
+import pickle
 
 
 class Trsl(object):
@@ -24,7 +26,7 @@ class Trsl(object):
             self.ngram_window_size   -> no of predictor variables (inclusive of target)
     """
 
-    def __init__(self, ngram_window_size=5, reduction_threshold=0.15):
+    def __init__(self, ngram_window_size=5, reduction_threshold=0.05):
 
         self.reduction_threshold = reduction_threshold
         self.ngram_window_size = ngram_window_size
@@ -169,14 +171,20 @@ class Trsl(object):
                     curr_node.entropy - curr_question.avg_conditional_entropy
                 )
                 logging.debug(
-                    "Predictor var: " + str(Xi)
+                    "Predictor var X" + str(Xi)
                     + " Set: " + str(Si)
                     + " Reduction: " + str(curr_question.reduction)
                 )
                 if best_question.reduction < curr_question.reduction:
                     best_question = curr_question
-                    logging.debug("Best Question : "+str(best_question.set))
-
+                    logging.debug(
+                        "Best Question : " + str(best_question.set) 
+                        + " Predictor var X" + str(Xi)
+                    )
+        if best_question.reduction > 0.1:
+            logging.info( "Reduction: " + str(best_question.reduction) + "Set: " + str(best_question.set))
+            logging.info("nb prob " + str(best_question.nb_probability))
+            logging.info("b prob " + str(best_question.b_probability))
         if best_question.reduction > self.reduction_threshold:
             curr_node.set = best_question.set
             curr_node.predictor_variable_index = (
@@ -232,9 +240,20 @@ class Trsl(object):
             todo : make no of sets and their size configurable if possible
         """
 
-        return [
-            set(["the", "for", "in", "at", "a"])
-        ]
+        data = json.loads(open("../sets/Kmeans-9811words-100clusters.json","r").read())
+ 
+        # Every element in the list needs to be a set because
+        # belongs to operation utilises O(1) steps
+
+        for i in range(len(data)):
+            data[i] = set(data[i])
+        return data
+
+    def serialize(self, filename):
+        open(filename,"wb").write(pickle.dumps(self.root))
+
+    def load(self, filename):
+        self.root = pickle.loads(open(filename,"rb").read())
 
     def predict(self, predictor_variable_list):
         """

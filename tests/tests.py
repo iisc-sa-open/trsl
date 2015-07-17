@@ -28,7 +28,7 @@ sys.path.insert(0, PARENT_DIR)
 
 import trsl
 
-def init_logger():
+def init_logger(file):
     """
         Initializes the format and level of the logging
     """
@@ -49,19 +49,29 @@ def init_logger():
     handler.setFormatter(formatter)
     logger.addHandler(handler)
     if args.verbose:
-        logging.basicConfig(filename='trsl.log', filemode='w', level=logging.DEBUG)
+        logging.basicConfig(filename=file+"log", filemode='w', level=logging.DEBUG)
         logger.setLevel(logging.DEBUG)
+        
     else:
-        logging.basicConfig(filename='trsl.log', filemode='w', level=logging.INFO)
+        logging.basicConfig(filename=file+"log", filemode='w', level=logging.INFO)
         logger.setLevel(logging.INFO)
+        
 
 NGRAM_WINDOW_SIZE = 6
-init_logger()
+FILENAME = "../datasets/data.txt"
+init_logger(FILENAME)
 logging.debug("Ngam Window Size:"+str(NGRAM_WINDOW_SIZE))
 time.time()
 OLD_TIME = time.time()
 trsl_instance = trsl.Trsl(NGRAM_WINDOW_SIZE)
-trsl_instance.train("../last_question")
+try:
+    open(FILENAME + ".dat", "r")
+    logging.info("Found dat file -> loading precomputed data")
+    trsl_instance.load(FILENAME + ".dat")
+except (OSError, IOError) as e:
+    trsl_instance.train(FILENAME)
+    trsl_instance.serialize(FILENAME + ".dat")
+
 NEW_TIME = time.time()
 trsl.logging.info("Execution Time : "+str(NEW_TIME - OLD_TIME))
 while True:
