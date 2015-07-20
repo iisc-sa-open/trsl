@@ -14,6 +14,7 @@ import logging
 import math
 import preprocess   # todo check for namespace pollution
 import Queue
+import random
 import pickle
 
 
@@ -182,7 +183,7 @@ class Trsl(object):
                         + " Predictor var X" + str(Xi)
                     )
         if best_question.reduction > 0.1:
-            logging.info( "Reduction: " + str(best_question.reduction) + "Set: " + str(best_question.set))
+            logging.info( "Reduction: " + str(best_question.reduction))
             logging.info("nb prob " + str(best_question.nb_probability))
             logging.info("b prob " + str(best_question.b_probability))
         if best_question.reduction > self.reduction_threshold:
@@ -255,6 +256,19 @@ class Trsl(object):
     def load(self, filename):
         self.root = pickle.loads(open(filename,"rb").read())
 
+    def tree_walk(self, seed, no_of_words):
+
+        for x in range(no_of_words):
+            dist = self.predict(seed[-(self.ngram_window_size-1)::])
+            r = random.random()
+            sum = 0
+            for i in dist.keys():
+                sum += dist[i]
+                if r <= sum:
+                    seed.append(i)
+                    break
+        return seed
+
     def predict(self, predictor_variable_list):
         """
             Given a list of predictor words, this method
@@ -266,8 +280,7 @@ class Trsl(object):
 
         if len(predictor_variable_list) != self.ngram_window_size-1:
             raise ValueError(
-                """predictor_variable_list size
-                should conform with ngram window size"""
+                "predictor_variable_list size should conform with ngram window size"
             )
         temp = self.root
         steps = 0
