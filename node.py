@@ -25,3 +25,4 @@ class Node(object):
         self.row_fragment_indices = None
         self.entropy = 0
         self.parent = None
+        self.depth = 0

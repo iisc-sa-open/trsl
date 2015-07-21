@@ -49,12 +49,12 @@ def init_logger(file):
     handler.setFormatter(formatter)
     logger.addHandler(handler)
     if args.verbose:
-        logging.basicConfig(filename=file+"log", filemode='w', level=logging.DEBUG)
         logger.setLevel(logging.DEBUG)
+        logging.basicConfig(filename="log", filemode='w')
         
     else:
-        logging.basicConfig(filename=file+"log", filemode='w', level=logging.INFO)
         logger.setLevel(logging.INFO)
+        logging.basicConfig(filename="log", filemode='w')
         
 
 NGRAM_WINDOW_SIZE = 6
@@ -74,6 +74,7 @@ except (OSError, IOError) as e:
 
 NEW_TIME = time.time()
 trsl.logging.info("Execution Time : "+str(NEW_TIME - OLD_TIME))
+#trsl_instance.tree_walk(["It", "was", "now", "some" ,"time"], 10)
 while True:
     print "\nEnter %s words to predict the next:"%(NGRAM_WINDOW_SIZE - 1)
     print "Ten most likely words:"+str(

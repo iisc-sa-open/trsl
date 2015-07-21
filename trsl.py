@@ -27,7 +27,7 @@ class Trsl(object):
             self.ngram_window_size   -> no of predictor variables (inclusive of target)
     """
 
-    def __init__(self, ngram_window_size=5, reduction_threshold=0.05):
+    def __init__(self, ngram_window_size=5, reduction_threshold=5):
 
         self.reduction_threshold = reduction_threshold
         self.ngram_window_size = ngram_window_size
@@ -39,6 +39,8 @@ class Trsl(object):
         self.word_sets = None
         # inf queue size hopefully <- todo : evaluate if we need this
         self.node_queue = Queue.Queue(-1)
+        self.max_depth = 0
+        self.min_depth = float('inf')
 
     def train(self, filename):
         """
@@ -56,6 +58,13 @@ class Trsl(object):
         while not self.node_queue.empty():
             self.process_node(self.node_queue.get())
         logging.info("Total no of Nodes:"+ str(self.no_of_nodes))
+        logging.info(
+                "Max Depth: %s Min Depth: %s"
+                % (
+                    self.max_depth,
+                    self.min_depth
+                )
+            )
 
     def set_root_state(self):
         """
@@ -90,6 +99,13 @@ class Trsl(object):
             self.root.dist[key] = probability
             self.root.entropy += -probability_of_info_gain
 
+        logging.debug(
+            "Root Entropy: %s"
+            % (
+                self.root.entropy
+            )
+        )
+
     def process_node(self, curr_node):
         """
             Used to process curr_node by computing best reduction
@@ -104,8 +120,6 @@ class Trsl(object):
                 *    cnb -> current node not belongs to the selected set
                 *    cb  -> current node belongs to the set
         """
-
-        global logging
 
         best_question = Question()
         self.no_of_nodes += 1
@@ -171,22 +185,18 @@ class Trsl(object):
                 curr_question.reduction = (
                     curr_node.entropy - curr_question.avg_conditional_entropy
                 )
-                logging.debug(
-                    "Predictor var X" + str(Xi)
-                    + " Set: " + str(Si)
-                    + " Reduction: " + str(curr_question.reduction)
-                )
                 if best_question.reduction < curr_question.reduction:
                     best_question = curr_question
-                    logging.debug(
-                        "Best Question : " + str(best_question.set) 
-                        + " Predictor var X" + str(Xi)
-                    )
-        if best_question.reduction > 0.1:
-            logging.info( "Reduction: " + str(best_question.reduction))
-            logging.info("nb prob " + str(best_question.nb_probability))
-            logging.info("b prob " + str(best_question.b_probability))
-        if best_question.reduction > self.reduction_threshold:
+        print best_question.reduction, curr_node.entropy, best_question.reduction * 100/curr_node.entropy
+        if best_question.reduction * 100 / curr_node.entropy > self.reduction_threshold:
+            logging.debug(
+                "Best Question: Reduction: %s -> X%s for Set: %s"
+                % (
+                    best_question.reduction,
+                    best_question.predictor_variable_index,
+                    best_question.set, 
+                )
+            )
             curr_node.set = best_question.set
             curr_node.predictor_variable_index = (
                 best_question.predictor_variable_index
@@ -195,16 +205,42 @@ class Trsl(object):
             curr_node.lchild.row_fragment_indices = best_question.b_indices
             curr_node.lchild.entropy = best_question.b_dist_entropy
             curr_node.lchild.dist = best_question.b_dist
+            curr_node.lchild.depth = curr_node.depth + 1
             curr_node.rchild = Node()
             curr_node.rchild.row_fragment_indices = best_question.nb_indices
             curr_node.rchild.entropy = best_question.nb_dist_entropy
             curr_node.rchild.dist = best_question.nb_dist
-            self.node_queue.put(curr_node.lchild)
-            self.node_queue.put(curr_node.rchild)
+            curr_node.rchild.depth = curr_node.depth + 1
+            if curr_node.lchild.entropy > 0:
+                self.node_queue.put(curr_node.lchild)
+            else:
+                if curr_node.depth + 1 > self.max_depth:
+                    self.max_depth = curr_node.depth + 1
+                if curr_node.depth + 1 < self.min_depth:
+                    self.min_depth = curr_node.depth - 1
+                logging.info(
+                    "Leaf Node reached, Top Probability dist:%s",
+                    dict(Counter(curr_node.lchild.dist).most_common(5))
+                )
+            if curr_node.rchild.entropy > 0:
+                self.node_queue.put(curr_node.rchild)
+            else:
+                if curr_node.depth + 1 > self.max_depth:
+                    self.max_depth = curr_node.depth + 1
+                if curr_node.depth + 1 < self.min_depth:
+                    self.min_depth = curr_node.depth - 1
+                logging.info(
+                    "Leaf Node reached, Top Probability dist:%s",
+                    dict(Counter(curr_node.rchild.dist).most_common(5))
+                )
             curr_node.lchild.parent = curr_node
             curr_node.rchild.parent = curr_node
 
         else:
+            if curr_node.depth + 1 > self.max_depth:
+                self.max_depth = curr_node.depth + 1
+            if curr_node.depth + 1 < self.min_depth:
+                self.min_depth = curr_node.depth - 1
             logging.info(
                 "Leaf Node reached, Top Probability dist:%s",
                 dict(Counter(curr_node.dist).most_common(5))
@@ -289,7 +325,7 @@ class Trsl(object):
                 # since the decision tree is  a full binary tree, both children exist
                 steps += 1
                 if predictor_variable_list[temp.predictor_variable_index] in temp.set:
-                    print(
+                    logging.debug(
                         "LEVEL: %s, X%s = %s belongs to %s? YES"
                         % (
                             steps, temp.predictor_variable_index,
@@ -301,7 +337,7 @@ class Trsl(object):
                     )
                     temp = temp.lchild
                 else:
-                    print(
+                    logging.debug(
                         "LEVEL: %s, X%s = %s belongs to %s? NO"
                         % (
                             steps, temp.predictor_variable_index,
@@ -313,4 +349,20 @@ class Trsl(object):
                     )
                     temp = temp.rchild
             else:
+                logging.info(
+                    "Total Reduction in Entropy: %s -> %s%%"
+                    % (
+                        self.root.entropy - temp.entropy,
+                        100 * (self.root.entropy - temp.entropy)/self.root.entropy
+                    )
+                )
+                logging.debug(
+                    "Probable Distribution: " + str(
+                        temp.dist
+                    )
+                )
+                logging.info("Depth Reached: " + str(
+                        steps
+                    )
+                )
                 return temp.dist
