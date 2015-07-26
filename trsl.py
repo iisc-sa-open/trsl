@@ -7,8 +7,8 @@
 
 
 from collections import Counter
+from functools import partial
 from node import Node
-from question import Question
 import json
 import logging
 import math
@@ -138,6 +138,12 @@ class Trsl(object):
             )
         )
 
+    def generate_pred_var_set_pairs(self):
+
+        for Xi in range(0, self.ngram_window_size-1):
+            for Si in self.word_sets:
+                yield (Xi, Si)
+
     def process_node(self, curr_node):
         """
             Used to process curr_node by computing best reduction
@@ -153,72 +159,12 @@ class Trsl(object):
                 *    cb  -> current node belongs to the set
         """
 
-        best_question = Question()
-        self.no_of_nodes += 1
-        for Xi in range(0, self.ngram_window_size-1):
-            for Si in self.word_sets:
-                if self.question_already_asked(curr_node, Xi, Si):
-                    continue
-                curr_question = Question()
-                curr_question.set = Si
-                curr_question.predictor_variable_index = Xi
-                for table_index in curr_node.row_fragment_indices:
-                    predictor_word = self.ngram_table[table_index, Xi]
-                    target_word = self.ngram_table[
-                        table_index, self.ngram_window_size-1
-                    ]
-                    if predictor_word in Si:
-                        curr_question.b_indices.append(table_index)
-                        try:
-                            curr_question.b_dist[target_word] += 1.0
-                        except KeyError:
-                            curr_question.b_dist[target_word] = 1.0
-                    else:
-                        curr_question.nb_indices.append(table_index)
-                        try:
-                            curr_question.nb_dist[target_word] += 1.0
-                        except KeyError:
-                            curr_question.nb_dist[target_word] = 1.0
-                b_frequency_sum = sum(curr_question.b_dist.values())
-                for key in curr_question.b_dist.keys():
-                    frequency = curr_question.b_dist[key]
-                    probability = frequency/b_frequency_sum
-                    probability_of_info_gain = (
-                        probability * math.log(probability, 2)
-                    )
-                    curr_question.b_dist[key] = probability
-                    curr_question.b_dist_entropy += -probability_of_info_gain
 
-                nb_frequency_sum = sum(curr_question.nb_dist.values())
-                for key in curr_question.nb_dist.keys():
-                    frequency = curr_question.nb_dist[key]
-                    probability = frequency/nb_frequency_sum
-                    probability_of_info_gain = (
-                        probability * math.log(probability, 2)
-                    )
-                    curr_question.nb_dist[key] = probability
-                    curr_question.nb_dist_entropy += -probability_of_info_gain
-                size_row_fragment = (
-                    len(curr_node.row_fragment_indices)
-                )
-                curr_question.b_probability = (
-                    float(len(curr_question.b_indices))/size_row_fragment
-                )
-                curr_question.nb_probability = (
-                    float(len(curr_question.nb_indices))/size_row_fragment
-                )
-                curr_question.avg_conditional_entropy = (
-                    (curr_question.b_probability
-                        * curr_question.b_dist_entropy)
-                    +
-                    (curr_question.nb_probability
-                        * curr_question.nb_dist_entropy)
-                )
-                curr_question.reduction = (
-                    curr_node.entropy - curr_question.avg_conditional_entropy
-                )
-                if best_question.reduction < curr_question.reduction:
-                    best_question = curr_question
+        self.no_of_nodes += 1
+        #bind ngramtable to a partial function
+        eval_question = partial(curr_node.eval_question, self.ngram_table)
+        questions = map(eval_question,self.generate_pred_var_set_pairs())
+        best_question = max(questions, key= lambda question: question.reduction)
 
         if best_question.reduction * 100 / curr_node.entropy > self.reduction_threshold:
             logging.debug(
@@ -226,7 +172,7 @@ class Trsl(object):
                 % (
                     best_question.reduction,
                     best_question.predictor_variable_index,
-                    best_question.set, 
+                    best_question.set,
                 )
             )
             curr_node.set = best_question.set
@@ -278,26 +224,6 @@ class Trsl(object):
                 dict(Counter(curr_node.dist).most_common(5))
             )
 
-    def question_already_asked(self, curr_node, Xi, Si):
-        """
-            Checks if the same question has been asked
-            (same set and predictor variable index)
-            in the parent and the parent's parent and so on
-            till the root.
-
-            The rationale here is that asking the same question again
-            on a subset of the data the question was asked before
-            would cause all the data to go down one one of YES or NO path
-            which is unnecessary computation.
-        """
-        parent = curr_node.parent
-        while parent is not None:
-            if parent.set == Si and parent.predictor_variable_index == Xi:
-                return True
-            else:
-                parent = parent.parent
-        return False
-
     def build_sets(self):
 
         """
@@ -310,7 +236,7 @@ class Trsl(object):
         """
 
         data = json.loads(open(self.set_filename,"r").read())
- 
+
         # Every element in the list needs to be a set because
         # belongs to operation utilises O(1) steps
 
