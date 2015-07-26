@@ -27,7 +27,7 @@ class Trsl(object):
             self.ngram_window_size   -> no of predictor variables (inclusive of target)
     """
 
-    def __init__(self, ngram_window_size=5, reduction_threshold=5):
+    def __init__(self, filename, ngram_window_size=5, reduction_threshold=1):
 
         self.reduction_threshold = reduction_threshold
         self.ngram_window_size = ngram_window_size
@@ -41,30 +41,37 @@ class Trsl(object):
         self.node_queue = Queue.Queue(-1)
         self.max_depth = 0
         self.min_depth = float('inf')
+        self.filename = filename
 
-    def train(self, filename):
+    def train(self):
         """
             Given a filename(containing a training corpus), build a decision tree
             which can be accessed through self.root
 
         """
 
-        self.ngram_table, self.vocabulary_set = preprocess.preprocess(
-            filename, self.ngram_window_size
-        )
-        self.set_root_state()
-        self.node_queue.put(self.root)
-        self.word_sets = self.build_sets()
-        while not self.node_queue.empty():
-            self.process_node(self.node_queue.get())
-        logging.info("Total no of Nodes:"+ str(self.no_of_nodes))
-        logging.info(
-                "Max Depth: %s Min Depth: %s"
-                % (
-                    self.max_depth,
-                    self.min_depth
-                )
+        try:
+            open(self.filename + ".dat", "r")
+            logging.info("Found dat file -> loading precomputed data")
+            self.load(self.filename + ".dat")
+        except (OSError, IOError) as e:
+            self.ngram_table, self.vocabulary_set = preprocess.preprocess(
+                self.filename, self.ngram_window_size
             )
+            self.set_root_state()
+            self.node_queue.put(self.root)
+            self.word_sets = self.build_sets()
+            while not self.node_queue.empty():
+                self.process_node(self.node_queue.get())
+            logging.info("Total no of Nodes:"+ str(self.no_of_nodes))
+            logging.info(
+                    "Max Depth: %s Min Depth: %s"
+                    % (
+                        self.max_depth,
+                        self.min_depth
+                    )
+                )
+            self.serialize(self.filename + ".dat")
 
     def set_root_state(self):
         """
@@ -187,7 +194,7 @@ class Trsl(object):
                 )
                 if best_question.reduction < curr_question.reduction:
                     best_question = curr_question
-        print best_question.reduction, curr_node.entropy, best_question.reduction * 100/curr_node.entropy
+
         if best_question.reduction * 100 / curr_node.entropy > self.reduction_threshold:
             logging.debug(
                 "Best Question: Reduction: %s -> X%s for Set: %s"

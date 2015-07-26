@@ -63,15 +63,8 @@ init_logger(FILENAME)
 logging.debug("Ngam Window Size:"+str(NGRAM_WINDOW_SIZE))
 time.time()
 OLD_TIME = time.time()
-trsl_instance = trsl.Trsl(NGRAM_WINDOW_SIZE)
-try:
-    open(FILENAME + ".dat", "r")
-    logging.info("Found dat file -> loading precomputed data")
-    trsl_instance.load(FILENAME + ".dat")
-except (OSError, IOError) as e:
-    trsl_instance.train(FILENAME)
-    trsl_instance.serialize(FILENAME + ".dat")
-
+trsl_instance = trsl.Trsl(FILENAME, NGRAM_WINDOW_SIZE)
+trsl_instance.train()
 NEW_TIME = time.time()
 trsl.logging.info("Execution Time : "+str(NEW_TIME - OLD_TIME))
 #trsl_instance.tree_walk(["It", "was", "now", "some" ,"time"], 10)
