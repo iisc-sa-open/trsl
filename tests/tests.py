@@ -28,7 +28,7 @@ sys.path.insert(0, PARENT_DIR)
 
 import trsl
 
-def init_logger(file):
+def init_logger():
     """
         Initializes the format and level of the logging
     """
@@ -50,26 +50,21 @@ def init_logger(file):
     logger.addHandler(handler)
     if args.verbose:
         logger.setLevel(logging.DEBUG)
-        logging.basicConfig(filename="log", filemode='w')
         
     else:
         logger.setLevel(logging.INFO)
-        logging.basicConfig(filename="log", filemode='w')
         
 
-NGRAM_WINDOW_SIZE = 6
-FILENAME = "../datasets/data.txt"
-init_logger(FILENAME)
-logging.debug("Ngam Window Size:"+str(NGRAM_WINDOW_SIZE))
+init_logger()
 time.time()
 OLD_TIME = time.time()
-trsl_instance = trsl.Trsl(FILENAME, NGRAM_WINDOW_SIZE)
+trsl_instance = trsl.Trsl()
 trsl_instance.train()
 NEW_TIME = time.time()
 trsl.logging.info("Execution Time : "+str(NEW_TIME - OLD_TIME))
 #trsl_instance.tree_walk(["It", "was", "now", "some" ,"time"], 10)
 while True:
-    print "\nEnter %s words to predict the next:"%(NGRAM_WINDOW_SIZE - 1)
+    print "\nEnter predictor words to predict the next:"
     print "Ten most likely words:"+str(
         Counter(
             trsl_instance.predict(

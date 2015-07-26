@@ -6,7 +6,7 @@
 """
 
 
-from collections import Counter   # todo : remove this
+from collections import Counter
 from node import Node
 from question import Question
 import json
@@ -16,6 +16,7 @@ import preprocess   # todo check for namespace pollution
 import Queue
 import random
 import pickle
+import ConfigParser
 
 
 class Trsl(object):
@@ -27,8 +28,30 @@ class Trsl(object):
             self.ngram_window_size   -> no of predictor variables (inclusive of target)
     """
 
-    def __init__(self, filename, ngram_window_size=5, reduction_threshold=1):
+    def __init__(self, filename = None, ngram_window_size = None, reduction_threshold = None, set_filename = None):
 
+        if filename is None or ngram_window_size is None or reduction_threshold is None or set_filename:
+            config = ConfigParser.RawConfigParser()
+            if len(config.read('config.cfg')) > 0:
+                try:
+                    if reduction_threshold is None:
+                        reduction_threshold = config.getfloat('Trsl', 'reduction_threshold')
+                    if filename is None:
+                        filename = config.get('Trsl', 'corpus_filename')
+                    if ngram_window_size is None:
+                        ngram_window_size = config.getint('Trsl', 'ngram_window_size')
+                    if set_filename is None:
+                        set_filename = config.get("Trsl", 'set_filename')
+                except ValueError:
+                    logging.error("Error! ValueError occured in specified configuration")
+                    raise ValueError
+            else:
+                logging.error("Config File not found: config.cfg")
+                raise IOError
+        logging.info("Reduction Threshold: %s",reduction_threshold)
+        logging.info("Corpus Filename: %s", filename)
+        logging.info("Ngram Window Size: %s", ngram_window_size)
+        logging.info("Set Utilised: %s", set_filename)
         self.reduction_threshold = reduction_threshold
         self.ngram_window_size = ngram_window_size
         self.root = Node()
@@ -42,6 +65,7 @@ class Trsl(object):
         self.max_depth = 0
         self.min_depth = float('inf')
         self.filename = filename
+        self.set_filename = set_filename
 
     def train(self):
         """
@@ -54,6 +78,7 @@ class Trsl(object):
             open(self.filename + ".dat", "r")
             logging.info("Found dat file -> loading precomputed data")
             self.load(self.filename + ".dat")
+            # todo: configuration not loaded from the file, reset parameters
         except (OSError, IOError) as e:
             self.ngram_table, self.vocabulary_set = preprocess.preprocess(
                 self.filename, self.ngram_window_size
@@ -284,7 +309,7 @@ class Trsl(object):
             todo : make no of sets and their size configurable if possible
         """
 
-        data = json.loads(open("../sets/Kmeans-9811words-100clusters.json","r").read())
+        data = json.loads(open(self.set_filename,"r").read())
  
         # Every element in the list needs to be a set because
         # belongs to operation utilises O(1) steps
