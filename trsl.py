@@ -28,9 +28,16 @@ class Trsl(object):
             self.ngram_window_size   -> no of predictor variables (inclusive of target)
     """
 
-    def __init__(self, filename = None, ngram_window_size = None, reduction_threshold = None, set_filename = None):
+    def __init__(
+            self,
+            filename=None,
+            ngram_window_size=None,
+            reduction_threshold=None,
+            set_filename=None
+        ):
 
-        if filename is None or ngram_window_size is None or reduction_threshold is None or set_filename:
+        if ((filename is None or ngram_window_size is None) or
+                (reduction_threshold is None or set_filename is None)):
             config = ConfigParser.RawConfigParser()
             if len(config.read('config.cfg')) > 0:
                 try:
@@ -48,7 +55,7 @@ class Trsl(object):
             else:
                 logging.error("Config File not found: config.cfg")
                 raise IOError
-        logging.info("Reduction Threshold: %s",reduction_threshold)
+        logging.info("Reduction Threshold: %s", reduction_threshold)
         logging.info("Corpus Filename: %s", filename)
         logging.info("Ngram Window Size: %s", ngram_window_size)
         logging.info("Set Utilised: %s", set_filename)
@@ -77,28 +84,26 @@ class Trsl(object):
         try:
             open(self.filename + ".dat", "r")
             logging.info("Found dat file -> loading precomputed data")
-            self.load(self.filename + ".dat")
+            self.__load(self.filename + ".dat")
             # todo: configuration not loaded from the file, reset parameters
-        except (OSError, IOError) as e:
+        except (OSError, IOError):
             self.ngram_table, self.vocabulary_set = preprocess.preprocess(
                 self.filename, self.ngram_window_size
             )
-            self.set_root_state()
+            self.__set_root_state()
             self.node_queue.put(self.root)
-            self.word_sets = self.build_sets()
+            self.word_sets = self.__build_sets()
             while not self.node_queue.empty():
-                self.process_node(self.node_queue.get())
+                self.__process_node(self.node_queue.get())
             logging.info("Total no of Nodes:"+ str(self.no_of_nodes))
             logging.info(
-                    "Max Depth: %s Min Depth: %s"
-                    % (
-                        self.max_depth,
-                        self.min_depth
-                    )
-                )
-            self.serialize(self.filename + ".dat")
+                "Max Depth: %s Min Depth: %s",
+                self.max_depth,
+                self.min_depth
+            )
+            self.__serialize(self.filename + ".dat")
 
-    def set_root_state(self):
+    def __set_root_state(self):
         """
             Calculates the probability distribution
             of the target variable values at the root node
@@ -132,19 +137,20 @@ class Trsl(object):
             self.root.entropy += -probability_of_info_gain
 
         logging.debug(
-            "Root Entropy: %s"
-            % (
-                self.root.entropy
-            )
+            "Root Entropy: %s",
+            self.root.entropy
         )
 
-    def generate_pred_var_set_pairs(self):
+    def __generate_pred_var_set_pairs(self):
+        """
+            Lazy generator for Predictor, Set combinations
+        """
 
-        for Xi in range(0, self.ngram_window_size-1):
-            for Si in self.word_sets:
-                yield (Xi, Si)
+        for x_index in range(0, self.ngram_window_size-1):
+            for set_data in self.word_sets:
+                yield (x_index, set_data)
 
-    def process_node(self, curr_node):
+    def __process_node(self, curr_node):
         """
             Used to process curr_node by computing best reduction
             and choosing to create children nodes or not based on
@@ -163,17 +169,15 @@ class Trsl(object):
         self.no_of_nodes += 1
         #bind ngramtable to a partial function
         eval_question = partial(curr_node.eval_question, self.ngram_table)
-        questions = map(eval_question,self.generate_pred_var_set_pairs())
-        best_question = max(questions, key= lambda question: question.reduction)
+        questions = map(eval_question, self.__generate_pred_var_set_pairs())
+        best_question = max(questions, key=lambda question: question.reduction)
 
         if best_question.reduction * 100 / curr_node.entropy > self.reduction_threshold:
             logging.debug(
-                "Best Question: Reduction: %s -> X%s for Set: %s"
-                % (
-                    best_question.reduction,
-                    best_question.predictor_variable_index,
-                    best_question.set,
-                )
+                "Best Question: Reduction: %s -> X%s for Set: %s",
+                best_question.reduction,
+                best_question.predictor_variable_index,
+                best_question.set
             )
             curr_node.set = best_question.set
             curr_node.predictor_variable_index = (
@@ -224,8 +228,7 @@ class Trsl(object):
                 dict(Counter(curr_node.dist).most_common(5))
             )
 
-    def build_sets(self):
-
+    def __build_sets(self):
         """
             This method is stubbed right now to return predetermined sets
             We hope to build a system that returns sets built by clustering words
@@ -235,8 +238,11 @@ class Trsl(object):
             todo : make no of sets and their size configurable if possible
         """
 
-        data = json.loads(open(self.set_filename,"r").read())
-
+        try:
+            data = json.loads(open(self.set_filename, "r").read())
+        except IOError:
+            logging.error("Set File not found")
+            raise
         # Every element in the list needs to be a set because
         # belongs to operation utilises O(1) steps
 
@@ -244,21 +250,36 @@ class Trsl(object):
             data[i] = set(data[i])
         return data
 
-    def serialize(self, filename):
-        open(filename,"wb").write(pickle.dumps(self.root))
+    def __serialize(self, filename):
+        """
+            Used for pickling and writing the constructed Trsl
+            into a file for future use
+        """
 
-    def load(self, filename):
-        self.root = pickle.loads(open(filename,"rb").read())
+        open(filename, "wb").write(pickle.dumps(self.root))
+
+    def __load(self, filename):
+        """
+            Used for loading the pickled data which
+            is written in a file to the memory
+        """
+
+        self.root = pickle.loads(open(filename, "rb").read())
 
     def tree_walk(self, seed, no_of_words):
+        """
+            Used for random tree walk using the prediction
+            from the constructed Trsl from a seed predictor variables
+            upto no_of_words prediction
+        """
 
-        for x in range(no_of_words):
+        for index in range(no_of_words):
             dist = self.predict(seed[-(self.ngram_window_size-1)::])
-            r = random.random()
+            rand = random.random()
             sum = 0
             for i in dist.keys():
                 sum += dist[i]
-                if r <= sum:
+                if rand <= sum:
                     seed.append(i)
                     break
         return seed
@@ -284,43 +305,30 @@ class Trsl(object):
                 steps += 1
                 if predictor_variable_list[temp.predictor_variable_index] in temp.set:
                     logging.debug(
-                        "LEVEL: %s, X%s = %s belongs to %s? YES"
-                        % (
-                            steps, temp.predictor_variable_index,
-                            predictor_variable_list[
-                                temp.predictor_variable_index
-                            ],
-                            temp.set
-                        )
+                        "LEVEL: %s, X%s = %s belongs to %s? YES",
+                        steps, temp.predictor_variable_index,
+                        predictor_variable_list[
+                            temp.predictor_variable_index
+                        ],
+                        temp.set
                     )
                     temp = temp.lchild
                 else:
                     logging.debug(
-                        "LEVEL: %s, X%s = %s belongs to %s? NO"
-                        % (
-                            steps, temp.predictor_variable_index,
-                            predictor_variable_list[
-                                temp.predictor_variable_index
-                            ],
-                            temp.set
-                        )
+                        "LEVEL: %s, X%s = %s belongs to %s? NO",
+                        steps, temp.predictor_variable_index,
+                        predictor_variable_list[
+                            temp.predictor_variable_index
+                        ],
+                        temp.set
                     )
                     temp = temp.rchild
             else:
                 logging.info(
-                    "Total Reduction in Entropy: %s -> %s%%"
-                    % (
-                        self.root.entropy - temp.entropy,
-                        100 * (self.root.entropy - temp.entropy)/self.root.entropy
-                    )
+                    "Total Reduction in Entropy: %s -> %s%%",
+                    self.root.entropy - temp.entropy,
+                    100 * (self.root.entropy - temp.entropy)/self.root.entropy
                 )
-                logging.debug(
-                    "Probable Distribution: " + str(
-                        temp.dist
-                    )
-                )
-                logging.info("Depth Reached: " + str(
-                        steps
-                    )
-                )
+                logging.debug("Probable Distribution: %s", temp.dist)
+                logging.info("Depth Reached: %s", steps)
                 return temp.dist
