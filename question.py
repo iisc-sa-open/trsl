@@ -24,4 +24,5 @@ class Question(object):
         self.predictor_variable_index = 0
         self.b_probability = 0
         self.nb_probability = 0
-        self.avg_conditional_entropy = 0
+        self.avg_conditional_entropy = float("inf")
+        # min of avg_conditional_entropy needs to be picked, thus default is set to infinity

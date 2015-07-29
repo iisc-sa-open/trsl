@@ -170,14 +170,14 @@ class Trsl(object):
         #bind ngramtable to a partial function
         eval_question = partial(curr_node.eval_question, self.ngram_table)
         questions = map(eval_question, self.__generate_pred_var_set_pairs())
-        best_question = max(questions, key=lambda question: question.reduction)
 
-        if best_question.reduction * 100 / curr_node.entropy > self.reduction_threshold:
+        best_question = min(questions, key=lambda question: question.avg_conditional_entropy)
+        if best_question.reduction * 100 / curr_node.entropy > 1:
             logging.debug(
                 "Best Question: Reduction: %s -> X%s for Set: %s",
                 best_question.reduction,
                 best_question.predictor_variable_index,
-                best_question.set
+                id(best_question.set)
             )
             curr_node.set = best_question.set
             curr_node.predictor_variable_index = (
@@ -193,7 +193,7 @@ class Trsl(object):
             curr_node.rchild.entropy = best_question.nb_dist_entropy
             curr_node.rchild.dist = best_question.nb_dist
             curr_node.rchild.depth = curr_node.depth + 1
-            if curr_node.lchild.entropy > 0:
+            if curr_node.lchild.entropy > 0 and ((self.root.entropy - curr_node.lchild.entropy) * 100 / self.root.entropy < self.reduction_threshold):
                 self.node_queue.put(curr_node.lchild)
             else:
                 if curr_node.depth + 1 > self.max_depth:
@@ -204,7 +204,7 @@ class Trsl(object):
                     "Leaf Node reached, Top Probability dist:%s",
                     dict(Counter(curr_node.lchild.dist).most_common(5))
                 )
-            if curr_node.rchild.entropy > 0:
+            if curr_node.rchild.entropy > 0 and ((self.root.entropy - curr_node.rchild.entropy) * 100 / self.root.entropy < self.reduction_threshold):
                 self.node_queue.put(curr_node.rchild)
             else:
                 if curr_node.depth + 1 > self.max_depth:
