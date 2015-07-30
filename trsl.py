@@ -114,6 +114,7 @@ class Trsl(object):
             fragmented yet.
         """
         self.root.dist = {}
+        self.root.probability = 1
         for index in range(0, len(self.ngram_table)):
             try:
                 self.root.dist[
@@ -134,11 +135,11 @@ class Trsl(object):
             probability = frequency/len(self.root.row_fragment_indices)
             probability_of_info_gain = probability * math.log(probability, 2)
             self.root.dist[key] = probability
-            self.root.entropy += -probability_of_info_gain
+            self.root.probabilistic_entropy += -probability_of_info_gain
 
         logging.debug(
             "Root Entropy: %s",
-            self.root.entropy
+            self.root.probabilistic_entropy
         )
 
     def __generate_pred_var_set_pairs(self):
@@ -172,7 +173,7 @@ class Trsl(object):
         questions = map(eval_question, self.__generate_pred_var_set_pairs())
 
         best_question = min(questions, key=lambda question: question.avg_conditional_entropy)
-        if best_question.reduction * 100 / curr_node.entropy > 1:
+        if best_question.reduction * 100 / curr_node.probabilistic_entropy > 0.5:
             logging.debug(
                 "Best Question: Reduction: %s -> X%s for Set: %s",
                 best_question.reduction,
@@ -185,15 +186,18 @@ class Trsl(object):
             )
             curr_node.lchild = Node()
             curr_node.lchild.row_fragment_indices = best_question.b_indices
-            curr_node.lchild.entropy = best_question.b_dist_entropy
+            curr_node.lchild.probability = best_question.b_probability
+            curr_node.lchild.probabilistic_entropy = best_question.b_probability * best_question.b_dist_entropy
             curr_node.lchild.dist = best_question.b_dist
             curr_node.lchild.depth = curr_node.depth + 1
             curr_node.rchild = Node()
             curr_node.rchild.row_fragment_indices = best_question.nb_indices
-            curr_node.rchild.entropy = best_question.nb_dist_entropy
+            curr_node.rchild.probability = best_question.nb_probability
+            curr_node.rchild.probabilistic_entropy = best_question.nb_probability * best_question.nb_dist_entropy
+            print curr_node.probability, curr_node.lchild.probability, curr_node.rchild.probability
             curr_node.rchild.dist = best_question.nb_dist
             curr_node.rchild.depth = curr_node.depth + 1
-            if curr_node.lchild.entropy > 0 and ((self.root.entropy - curr_node.lchild.entropy) * 100 / self.root.entropy < self.reduction_threshold):
+            if curr_node.lchild.probabilistic_entropy > 0 and ((self.root.probabilistic_entropy - curr_node.lchild.probabilistic_entropy) * 100 / self.root.probabilistic_entropy < self.reduction_threshold):
                 self.node_queue.put(curr_node.lchild)
             else:
                 if curr_node.depth + 1 > self.max_depth:
@@ -204,7 +208,7 @@ class Trsl(object):
                     "Leaf Node reached, Top Probability dist:%s",
                     dict(Counter(curr_node.lchild.dist).most_common(5))
                 )
-            if curr_node.rchild.entropy > 0 and ((self.root.entropy - curr_node.rchild.entropy) * 100 / self.root.entropy < self.reduction_threshold):
+            if curr_node.rchild.probabilistic_entropy > 0 and ((self.root.probabilistic_entropy - curr_node.rchild.probabilistic_entropy) * 100 / self.root.probabilistic_entropy < self.reduction_threshold):
                 self.node_queue.put(curr_node.rchild)
             else:
                 if curr_node.depth + 1 > self.max_depth:
@@ -326,8 +330,8 @@ class Trsl(object):
             else:
                 logging.info(
                     "Total Reduction in Entropy: %s -> %s%%",
-                    self.root.entropy - temp.entropy,
-                    100 * (self.root.entropy - temp.entropy)/self.root.entropy
+                    self.root.probabilistic_entropy - temp.probabilistic_entropy,
+                    100 * (self.root.probabilistic_entropy - temp.probabilistic_entropy)/self.root.probabilistic_entropy
                 )
                 logging.debug("Probable Distribution: %s", temp.dist)
                 logging.info("Depth Reached: %s", steps)

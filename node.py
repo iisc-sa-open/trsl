@@ -24,9 +24,10 @@ class Node(object):
         self.dist = None
         self.predictor_variable_index = None
         self.row_fragment_indices = None
-        self.entropy = 0
+        self.probabilistic_entropy = 0
         self.parent = None
         self.depth = 0
+        self.probability = 0
 
     def question_already_asked(self, x_index, set_data):
         """
@@ -70,10 +71,10 @@ class Node(object):
             len(self.row_fragment_indices)
         )
         question.b_probability = (
-            float(len(question.b_indices))/set_dataze_row_fragment
+            self.probability * float(len(question.b_indices))/set_dataze_row_fragment
         )
         question.nb_probability = (
-            float(len(question.nb_indices))/set_dataze_row_fragment
+            self.probability * float(len(question.nb_indices))/set_dataze_row_fragment
         )
         question.avg_conditional_entropy = (
             (question.b_probability * question.b_dist_entropy)
@@ -81,7 +82,7 @@ class Node(object):
             (question.nb_probability * question.nb_dist_entropy)
         )
         question.reduction = (
-            self.entropy - question.avg_conditional_entropy
+            self.probabilistic_entropy - question.avg_conditional_entropy
         )
 
         return question
