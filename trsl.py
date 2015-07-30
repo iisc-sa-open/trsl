@@ -13,7 +13,6 @@ import json
 import logging
 import math
 import preprocess   # todo check for namespace pollution
-import Queue
 import random
 import pickle
 import ConfigParser
@@ -67,8 +66,7 @@ class Trsl(object):
         self.ngram_table = None
         self.vocabulary_set = None
         self.word_sets = None
-        # inf queue size hopefully <- todo : evaluate if we need this
-        self.node_queue = Queue.Queue(-1)
+        self.current_leaf_nodes = []
         self.max_depth = 0
         self.min_depth = float('inf')
         self.filename = filename
@@ -90,11 +88,20 @@ class Trsl(object):
             self.ngram_table, self.vocabulary_set = preprocess.preprocess(
                 self.filename, self.ngram_window_size
             )
-            self.__set_root_state()
-            self.node_queue.put(self.root)
             self.word_sets = self.__build_sets()
-            while not self.node_queue.empty():
-                self.__process_node(self.node_queue.get())
+            self.__set_root_state()
+            self.__process_node(self.root)
+            self.current_leaf_nodes.append(self.root)
+            while not self.__stop_growing():
+                node_to_split = min(self.current_leaf_nodes, key=lambda x: x.best_question.avg_conditional_entropy)
+                if node_to_split.best_question.avg_conditional_entropy == 0:
+                    break
+                self.__split_node(node_to_split)
+                self.current_leaf_nodes.remove(node_to_split)
+                self.__process_node(node_to_split.lchild)
+                self.__process_node(node_to_split.rchild)
+                self.current_leaf_nodes.append(node_to_split.lchild)
+                self.current_leaf_nodes.append(node_to_split.rchild)
             logging.info("Total no of Nodes:"+ str(self.no_of_nodes))
             logging.info(
                 "Max Depth: %s Min Depth: %s",
@@ -102,6 +109,39 @@ class Trsl(object):
                 self.min_depth
             )
             self.__serialize(self.filename + ".dat")
+
+    def __split_node(self, node_to_split):
+
+        self.no_of_nodes += 2
+        node_to_split.set = node_to_split.best_question.set
+        node_to_split.predictor_variable_index = (
+            node_to_split.best_question.predictor_variable_index
+        )
+        node_to_split.lchild = Node()
+        node_to_split.lchild.parent = node_to_split
+        node_to_split.lchild.row_fragment_indices = node_to_split.best_question.b_indices
+        node_to_split.lchild.probability = node_to_split.best_question.b_probability
+        node_to_split.lchild.absolute_entropy = node_to_split.best_question.b_dist_entropy
+        node_to_split.lchild.probabilistic_entropy = node_to_split.best_question.b_probability * node_to_split.best_question.b_dist_entropy
+        node_to_split.lchild.dist = node_to_split.best_question.b_dist
+        node_to_split.lchild.depth = node_to_split.depth + 1
+
+        node_to_split.rchild = Node()
+        node_to_split.rchild.parent = node_to_split
+        node_to_split.rchild.row_fragment_indices = node_to_split.best_question.nb_indices
+        node_to_split.rchild.probability = node_to_split.best_question.nb_probability
+        node_to_split.rchild.absolute_entropy = node_to_split.best_question.nb_dist_entropy
+        node_to_split.rchild.probabilistic_entropy = node_to_split.best_question.nb_probability * node_to_split.best_question.nb_dist_entropy
+        node_to_split.rchild.dist = node_to_split.best_question.nb_dist
+        node_to_split.rchild.depth = node_to_split.depth + 1
+
+    def __stop_growing(self):
+
+        probabilistic_entropies_sum = sum(node.probabilistic_entropy for node in self.current_leaf_nodes)
+        if (self.root.absolute_entropy - probabilistic_entropies_sum) * 100 / self.root.absolute_entropy  < self.reduction_threshold:
+            return False
+        else:
+            return True
 
     def __set_root_state(self):
         """
@@ -135,8 +175,9 @@ class Trsl(object):
             probability = frequency/len(self.root.row_fragment_indices)
             probability_of_info_gain = probability * math.log(probability, 2)
             self.root.dist[key] = probability
-            self.root.probabilistic_entropy += -probability_of_info_gain
+            self.root.absolute_entropy += -probability_of_info_gain
 
+        self.root.probabilistic_entropy = self.root.absolute_entropy * self.root.probability
         logging.debug(
             "Root Entropy: %s",
             self.root.probabilistic_entropy
@@ -167,70 +208,11 @@ class Trsl(object):
         """
 
 
-        self.no_of_nodes += 1
         #bind ngramtable to a partial function
         eval_question = partial(curr_node.eval_question, self.ngram_table)
         questions = map(eval_question, self.__generate_pred_var_set_pairs())
+        curr_node.best_question = min(questions, key=lambda question: question.avg_conditional_entropy)
 
-        best_question = min(questions, key=lambda question: question.avg_conditional_entropy)
-        if best_question.reduction * 100 / curr_node.probabilistic_entropy > 0.5:
-            logging.debug(
-                "Best Question: Reduction: %s -> X%s for Set: %s",
-                best_question.reduction,
-                best_question.predictor_variable_index,
-                id(best_question.set)
-            )
-            curr_node.set = best_question.set
-            curr_node.predictor_variable_index = (
-                best_question.predictor_variable_index
-            )
-            curr_node.lchild = Node()
-            curr_node.lchild.row_fragment_indices = best_question.b_indices
-            curr_node.lchild.probability = best_question.b_probability
-            curr_node.lchild.probabilistic_entropy = best_question.b_probability * best_question.b_dist_entropy
-            curr_node.lchild.dist = best_question.b_dist
-            curr_node.lchild.depth = curr_node.depth + 1
-            curr_node.rchild = Node()
-            curr_node.rchild.row_fragment_indices = best_question.nb_indices
-            curr_node.rchild.probability = best_question.nb_probability
-            curr_node.rchild.probabilistic_entropy = best_question.nb_probability * best_question.nb_dist_entropy
-            print curr_node.probability, curr_node.lchild.probability, curr_node.rchild.probability
-            curr_node.rchild.dist = best_question.nb_dist
-            curr_node.rchild.depth = curr_node.depth + 1
-            if curr_node.lchild.probabilistic_entropy > 0 and ((self.root.probabilistic_entropy - curr_node.lchild.probabilistic_entropy) * 100 / self.root.probabilistic_entropy < self.reduction_threshold):
-                self.node_queue.put(curr_node.lchild)
-            else:
-                if curr_node.depth + 1 > self.max_depth:
-                    self.max_depth = curr_node.depth + 1
-                if curr_node.depth + 1 < self.min_depth:
-                    self.min_depth = curr_node.depth - 1
-                logging.info(
-                    "Leaf Node reached, Top Probability dist:%s",
-                    dict(Counter(curr_node.lchild.dist).most_common(5))
-                )
-            if curr_node.rchild.probabilistic_entropy > 0 and ((self.root.probabilistic_entropy - curr_node.rchild.probabilistic_entropy) * 100 / self.root.probabilistic_entropy < self.reduction_threshold):
-                self.node_queue.put(curr_node.rchild)
-            else:
-                if curr_node.depth + 1 > self.max_depth:
-                    self.max_depth = curr_node.depth + 1
-                if curr_node.depth + 1 < self.min_depth:
-                    self.min_depth = curr_node.depth - 1
-                logging.info(
-                    "Leaf Node reached, Top Probability dist:%s",
-                    dict(Counter(curr_node.rchild.dist).most_common(5))
-                )
-            curr_node.lchild.parent = curr_node
-            curr_node.rchild.parent = curr_node
-
-        else:
-            if curr_node.depth + 1 > self.max_depth:
-                self.max_depth = curr_node.depth + 1
-            if curr_node.depth + 1 < self.min_depth:
-                self.min_depth = curr_node.depth - 1
-            logging.info(
-                "Leaf Node reached, Top Probability dist:%s",
-                dict(Counter(curr_node.dist).most_common(5))
-            )
 
     def __build_sets(self):
         """

@@ -25,9 +25,11 @@ class Node(object):
         self.predictor_variable_index = None
         self.row_fragment_indices = None
         self.probabilistic_entropy = 0
+        self.absolute_entropy = 0
         self.parent = None
         self.depth = 0
         self.probability = 0
+        self.best_question = None
 
     def question_already_asked(self, x_index, set_data):
         """
@@ -67,14 +69,15 @@ class Node(object):
         question.b_dist_entropy = self.frequencies_to_probabilities_and_entropy(question.b_dist)
         question.nb_dist_entropy = self.frequencies_to_probabilities_and_entropy(question.nb_dist)
 
-        set_dataze_row_fragment = (
+        size_row_fragment = (
             len(self.row_fragment_indices)
         )
-        question.b_probability = (
-            self.probability * float(len(question.b_indices))/set_dataze_row_fragment
+
+        question.b_probability =  0 if size_row_fragment is 0 else (
+            self.probability * float(len(question.b_indices))/size_row_fragment
         )
-        question.nb_probability = (
-            self.probability * float(len(question.nb_indices))/set_dataze_row_fragment
+        question.nb_probability = 0 if size_row_fragment is 0 else (
+            self.probability * float(len(question.nb_indices))/size_row_fragment
         )
         question.avg_conditional_entropy = (
             (question.b_probability * question.b_dist_entropy)
