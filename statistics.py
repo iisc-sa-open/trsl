@@ -22,9 +22,10 @@ def compute_avg_entropy():
     bfs([trsl_instance.root])
     plt.xlabel("Level")
     plt.ylabel("Avg Entropy")
-    plt.plot(range(0,len(tree_data)), map(lambda x: x['avg_entropy'], tree_data))
-    plt.plot(range(0,len(tree_data)), map(lambda x: x['max_entropy'], tree_data))
-    plt.plot(range(0,len(tree_data)), map(lambda x: x['min_entropy'], tree_data))
+    plt.plot(range(0,len(tree_data)), map(lambda x: x['avg_entropy'], tree_data),label="Probabilistic Avg Entropy")
+    plt.plot(range(0,len(tree_data)), map(lambda x: x['max_entropy'], tree_data), label="Absolute Max Entropy")
+    plt.plot(range(0,len(tree_data)), map(lambda x: x['min_entropy'], tree_data), label="Absolute Min Entropy")
+    plt.legend()
     plt.savefig(
         "Avg Entropy vs Level.png"
     )
@@ -41,19 +42,25 @@ def compute_avg_entropy():
 def bfs(node_list):
 
     children = []
-    entropy_sum = 0
+    probabilistic_average_entropy = 0
+    if len(node_list) != 2**len(tree_data):
+        #Normalise probabilities if the current level in the binary tree is not full
+        probability_sum = sum(n.probability for n in node_list)
+        probabilistic_average_entropy = sum(n.probabilistic_entropy / probability_sum for n in node_list)
+    else:
+        probabilistic_average_entropy = sum(n.probabilistic_entropy for n in node_list)
+
     for node in node_list:
-        entropy_sum += node.entropy
         if node.rchild is not None:
             children.append(node.rchild)
         if node.lchild is not None:
             children.append(node.lchild)
     tree_data.append(
         {
-            'avg_entropy': float(entropy_sum) / 2**len(tree_data),
+            'avg_entropy': probabilistic_average_entropy,
             'no_of_nodes': len(node_list),
-            'max_entropy': max(node_list, key=lambda x: x.entropy).entropy,
-            'min_entropy': min(node_list, key=lambda x: x.entropy).entropy
+            'max_entropy': max(node_list, key=lambda x: x.absolute_entropy).absolute_entropy,
+            'min_entropy': min(node_list, key=lambda x: x.absolute_entropy).absolute_entropy
         }
     )
     if len(children) is not 0:
