@@ -43,12 +43,7 @@ def bfs(node_list):
 
     children = []
     probabilistic_average_entropy = 0
-    if len(node_list) != 2**len(tree_data):
-        #Normalise probabilities if the current level in the binary tree is not full
-        probability_sum = sum(n.probability for n in node_list)
-        probabilistic_average_entropy = sum(n.probabilistic_entropy / probability_sum for n in node_list)
-    else:
-        probabilistic_average_entropy = sum(n.probabilistic_entropy for n in node_list)
+    probabilistic_average_entropy = sum(n.probabilistic_entropy for n in node_list)
 
     for node in node_list:
         if node.rchild is not None:
