@@ -15,6 +15,7 @@ import math
 import preprocess   # todo check for namespace pollution
 import random
 import pickle
+from pickling import PickleTrsl
 import ConfigParser
 
 
@@ -93,8 +94,9 @@ class Trsl(object):
             self.__process_node(self.root)
             self.current_leaf_nodes.append(self.root)
             while not self.__stop_growing():
-                node_to_split = min(self.current_leaf_nodes, key=lambda x: x.best_question.avg_conditional_entropy)
-                if node_to_split.best_question.avg_conditional_entropy == 0:
+                node_to_split = max(self.current_leaf_nodes, key=lambda x: x.best_question.reduction)
+                if node_to_split.best_question.reduction == 0:
+                    logging.debug("Tree growing stopped, reduction no longer improving accuracy")
                     break
                 self.__split_node(node_to_split)
                 self.current_leaf_nodes.remove(node_to_split)
@@ -113,6 +115,12 @@ class Trsl(object):
     def __split_node(self, node_to_split):
 
         self.no_of_nodes += 2
+        logging.debug(
+            "Split Nodes at Level:%s"
+            % (
+                node_to_split.depth
+            )
+        )
         node_to_split.set = node_to_split.best_question.set
         node_to_split.predictor_variable_index = (
             node_to_split.best_question.predictor_variable_index
@@ -139,8 +147,15 @@ class Trsl(object):
 
         probabilistic_entropies_sum = sum(node.probabilistic_entropy for node in self.current_leaf_nodes)
         if (self.root.absolute_entropy - probabilistic_entropies_sum) * 100 / self.root.absolute_entropy  < self.reduction_threshold:
+            logging.debug(
+                "Reduction from Root: %s %%"
+                % (
+                    (self.root.absolute_entropy - probabilistic_entropies_sum) * 100 / self.root.absolute_entropy
+                )
+            )
             return False
         else:
+            logging.debug("Reduction Threshold reached, stopping tree growth!")
             return True
 
     def __set_root_state(self):
@@ -242,7 +257,8 @@ class Trsl(object):
             into a file for future use
         """
 
-        open(filename, "wb").write(pickle.dumps(self.root))
+        open(filename, "w").write(PickleTrsl().serialise(self))
+        #open(filename, "wb").write(pickle.dumps(self.root))
 
     def __load(self, filename):
         """
@@ -250,7 +266,8 @@ class Trsl(object):
             is written in a file to the memory
         """
 
-        self.root = pickle.loads(open(filename, "rb").read())
+        PickleTrsl().deserialise(self, open(self.filename+".dat","r").read())
+        #self.root = pickle.loads(open(filename, "rb").read())
 
     def tree_walk(self, seed, no_of_words):
         """
