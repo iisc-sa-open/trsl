@@ -31,7 +31,7 @@ class Node(object):
         self.probability = 0
         self.best_question = None
 
-    def question_already_asked(self, x_index, set_data):
+    def question_already_asked(self, x_index, set_index):
         """
             Checks if the same question has been asked
             (same set and predictor variable index)
@@ -45,7 +45,7 @@ class Node(object):
         """
         parent = self.parent
         while parent is not None:
-            if parent.set == set_data and parent.predictor_variable_index == x_index:
+            if parent.set == set_index and parent.predictor_variable_index == x_index:
                 return True
             else:
                 parent = parent.parent
@@ -57,15 +57,15 @@ class Node(object):
             reduction, belongs to and not belongs to probability
         """
 
-        x_index, set_data = pred_var_set_pair
+        x_index, set_index = pred_var_set_pair
         question = Question()
-        if self.question_already_asked(x_index, set_data):
+        if self.question_already_asked(x_index, set_index):
             #The reduction is set to 0 by default for a question
             return question
 
-        question.set = set_data
+        question.set = set_index
         question.predictor_variable_index = x_index
-        self.count_target_word_frequencies(ngram_table, x_index, set_data, question)
+        self.count_target_word_frequencies(ngram_table, x_index, set_index, question)
         question.b_dist_entropy = self.frequencies_to_probabilities_and_entropy(question.b_dist)
         question.nb_dist_entropy = self.frequencies_to_probabilities_and_entropy(question.nb_dist)
 
@@ -91,7 +91,7 @@ class Node(object):
         return question
 
 
-    def count_target_word_frequencies(self, ngram_table, x_index, set_data, question):
+    def count_target_word_frequencies(self, ngram_table, x_index, set_index, question):
         """
             Count target word frequencies for predictor
             variable belongs to set and predictor variable
@@ -103,7 +103,7 @@ class Node(object):
             target_word = ngram_table[
                 table_index, ngram_table.ngram_window_size-1
             ]
-            if predictor_word in set_data:
+            if predictor_word == set_index:
                 question.b_indices.append(table_index)
                 try:
                     question.b_dist[target_word] += 1.0

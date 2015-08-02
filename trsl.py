@@ -86,10 +86,10 @@ class Trsl(object):
             self.__load(self.filename + ".dat")
             # todo: configuration not loaded from the file, reset parameters
         except (OSError, IOError):
-            self.ngram_table, self.vocabulary_set = preprocess.preprocess(
-                self.filename, self.ngram_window_size
-            )
             self.word_sets = self.__build_sets()
+            self.ngram_table, self.word_ngram_table, self.word_sets, self.set_reverse_index = preprocess.preprocess(
+                self.filename, self.ngram_window_size, self.word_sets
+            )
             self.__set_root_state()
             self.__process_node(self.root)
             self.current_leaf_nodes.append(self.root)
@@ -104,6 +104,10 @@ class Trsl(object):
                 self.__process_node(node_to_split.rchild)
                 self.current_leaf_nodes.append(node_to_split.lchild)
                 self.current_leaf_nodes.append(node_to_split.rchild)
+
+            for leaf in self.current_leaf_nodes:
+                leaf.dist = self.__calculate_word_dist(leaf)
+
             logging.info("Total no of Nodes:"+ str(self.no_of_nodes))
             logging.info(
                 "Max Depth: %s Min Depth: %s",
@@ -111,6 +115,25 @@ class Trsl(object):
                 self.min_depth
             )
             self.__serialize(self.filename + ".dat")
+
+    def __calculate_word_dist(self, leaf):
+
+        dist = {}
+        for i in leaf.row_fragment_indices:
+             target_word = self.word_ngram_table[
+                 i, self.word_ngram_table.ngram_window_size-1
+             ]
+             try:
+                 dist[target_word] += 1.0
+             except KeyError:
+                 dist[target_word] = 1.0
+
+        frequency_sum = sum(dist.values())
+
+        for key in dist.keys():
+            dist[key] /= frequency_sum
+
+        return dist
 
     def __split_node(self, node_to_split):
 
@@ -121,7 +144,8 @@ class Trsl(object):
                 node_to_split.depth
             )
         )
-        node_to_split.set = node_to_split.best_question.set
+        #Best question has set index. Get the set back and assign it to the node
+        node_to_split.set = self.word_sets[node_to_split.best_question.set]
         node_to_split.predictor_variable_index = (
             node_to_split.best_question.predictor_variable_index
         )
@@ -204,8 +228,8 @@ class Trsl(object):
         """
 
         for x_index in range(0, self.ngram_window_size-1):
-            for set_data in self.word_sets:
-                yield (x_index, set_data)
+            for set_index in range(len(self.word_sets)):
+                yield (x_index, set_index)
 
     def __process_node(self, curr_node):
         """
@@ -285,6 +309,7 @@ class Trsl(object):
                 if rand <= sum:
                     seed.append(i)
                     break
+
         return seed
 
     def predict(self, predictor_variable_list):
