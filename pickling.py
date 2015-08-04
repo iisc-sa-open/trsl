@@ -16,56 +16,72 @@ class PickleTrsl(object):
 		pickled_data['max_depth'] = trsl_instance.max_depth
 		pickled_data['min_depth'] = trsl_instance.min_depth
 		pickled_data['tree'] = {}
-
+		pickled_data['word_sets'] = []
+		for set_data in trsl_instance.word_sets:
+			pickled_data['word_sets'].append(list(set_data))
+		pickled_data['current_leaf_nodes'] = []
+		for leaf in trsl_instance.current_leaf_nodes:
+			pickled_data['current_leaf_nodes'].append(str(id(leaf)))
 		tree = pickled_data['tree']
 		stack = [trsl_instance.root]
-		tree[id(trsl_instance.root)] = {}
-		tree[id(trsl_instance.root)]['set'] = list(trsl_instance.root.set)
-		tree[id(trsl_instance.root)]['dist'] = trsl_instance.root.dist
-		tree[id(trsl_instance.root)]['predictor_variable_index'] = trsl_instance.root.predictor_variable_index
-		tree[id(trsl_instance.root)]['absolute_entropy'] = trsl_instance.root.absolute_entropy
-		tree[id(trsl_instance.root)]['probabilistic_entropy'] = trsl_instance.root.probabilistic_entropy
-		tree[id(trsl_instance.root)]['depth'] = trsl_instance.root.depth
-		tree[id(trsl_instance.root)]['probability'] = trsl_instance.root.probability
-		tree[id(trsl_instance.root)]['parent'] = None
-		tree[id(trsl_instance.root)]['avg_conditional_entropy'] = trsl_instance.root.best_question.avg_conditional_entropy
-		tree[id(trsl_instance.root)]['reduction'] = trsl_instance.root.best_question.reduction
+		tree[str(id(trsl_instance.root))] = {}
+		self.__save_data(tree, trsl_instance.root)
+		tree[str(id(trsl_instance.root))]['lchild'] = None
+		tree[str(id(trsl_instance.root))]['rchild'] = None
+		tree[str(id(trsl_instance.root))]['parent'] = None
+
 		while len(stack) is not 0:
 			node = stack.pop()
 			if node is not None:
-				if node.lchild is not None:
-					stack.append(node.lchild)
-					tree[id(node)]['lchild'] = str(id(node.lchild))
-					tree[id(node.lchild)] = {}
-					if node.lchild.set is not None:
-						tree[id(node.lchild)]['set'] = list(node.lchild.set)
-						tree[id(node.lchild)]['predictor_variable_index'] = node.lchild.predictor_variable_index
-					tree[id(node.lchild)]['dist'] = node.lchild.dist
-					tree[id(node.lchild)]['absolute_entropy'] = node.lchild.absolute_entropy
-					tree[id(node.lchild)]['probabilistic_entropy'] = node.lchild.probabilistic_entropy
-					tree[id(node.lchild)]['depth'] = node.lchild.depth
-					tree[id(node.lchild)]['probability'] = node.lchild.probability
-					tree[id(node.lchild)]['parent'] = str(id(node))
-					tree[id(node.lchild)]['avg_conditional_entropy'] = node.lchild.best_question.avg_conditional_entropy
-					tree[id(node.lchild)]['reduction'] = node.lchild.best_question.reduction
+				if not node.is_leaf():
+					tree[str(id(node))]['lchild'] = str(id(node.lchild))
+					tree[str(id(node.lchild))] = {'parent':str(id(node))}
+					self.__save_data(tree, node.lchild)
+					if not node.lchild.is_leaf():
+						stack.append(node.lchild)
+					else:
+						tree[str(id(node.lchild))]['lchild'] = None
+						tree[str(id(node.lchild))]['rchild'] = None
 
-				if node.rchild is not None:
-					stack.append(node.rchild)
-					tree[id(node)]['rchild'] = str(id(node.rchild))
-					tree[id(node.rchild)] = {}
-					if node.rchild.set is not None:
-						tree[id(node.rchild)]['set'] = list(node.rchild.set)
-						tree[id(node.rchild)]['predictor_variable_index'] = node.rchild.predictor_variable_index
-					tree[id(node.rchild)]['dist'] = node.rchild.dist
-					tree[id(node.rchild)]['absolute_entropy'] = node.rchild.absolute_entropy
-					tree[id(node.rchild)]['probabilistic_entropy'] = node.rchild.probabilistic_entropy
-					tree[id(node.rchild)]['depth'] = node.rchild.depth
-					tree[id(node.rchild)]['probability'] = node.rchild.probability
-					tree[id(node.rchild)]['parent'] = str(id(node))
-					tree[id(node.rchild)]['avg_conditional_entropy'] = node.rchild.best_question.avg_conditional_entropy
-					tree[id(node.rchild)]['reduction'] = node.rchild.best_question.reduction
-		
+					tree[str(id(node))]['rchild'] = str(id(node.rchild))
+					tree[str(id(node.rchild))] = {'parent':str(id(node))}
+					self.__save_data(tree, node.rchild)
+					if not node.rchild.is_leaf():
+						stack.append(node.rchild)
+					else:
+						tree[str(id(node.rchild))]['rchild'] = None
+						tree[str(id(node.rchild))]['lchild'] = None
+
 		return json.dumps(pickled_data)
+
+	def __save_data(self, tree, node):
+
+		tree[str(id(node))]['dist'] = node.dist
+		tree[str(id(node))]['absolute_entropy'] = node.absolute_entropy
+		tree[str(id(node))]['probabilistic_entropy'] = node.probabilistic_entropy
+		tree[str(id(node))]['depth'] = node.depth
+		tree[str(id(node))]['probability'] = node.probability
+		tree[str(id(node))]['parent'] = str(id(node.parent))
+		tree[str(id(node))]['avg_conditional_entropy'] = node.best_question.avg_conditional_entropy
+		tree[str(id(node))]['reduction'] = node.best_question.reduction
+		tree[str(id(node))]['set'] = None if node.set is None else list(node.set)
+		tree[str(id(node))]['predictor_variable_index'] = node.predictor_variable_index
+		tree[str(id(node))]['row_fragment_indices'] = node.row_fragment_indices
+
+
+	def __set_data(self, tree, temp, key):
+
+		temp.dist = tree[key]['dist']
+		temp.absolute_entropy = float(tree[key]['absolute_entropy'])
+		temp.probabilistic_entropy = float(tree[key]['probabilistic_entropy'])
+		temp.depth = int(tree[key]['depth'])
+		temp.probability = float(tree[key]['probability'])
+		temp.best_question = Question()
+		temp.best_question.avg_conditional_entropy = float(tree[key]['avg_conditional_entropy'])
+		temp.best_question.reduction = float(tree[key]['reduction'])
+		temp.predictor_variable_index = tree[key]['predictor_variable_index']
+		temp.set = None if tree[key]['set'] is None else set(tree[key]['set'])
+		temp.row_fragment_indices = tree[key]['row_fragment_indices']
 
 	def deserialise(self, trsl_instance, json_data):
 
@@ -77,6 +93,9 @@ class PickleTrsl(object):
 		trsl_instance.ngram_window_size = int(pickled_data['ngram_window_size'])
 		trsl_instance.max_depth = pickled_data['max_depth']
 		trsl_instance.min_depth = pickled_data['min_depth']
+		trsl_instance.word_sets = []
+		for set_data in pickled_data['word_sets']:
+			trsl_instance.word_sets.append(set(set_data))
 		trsl_instance.root = Node()
 		tree = pickled_data['tree']
 
@@ -86,26 +105,20 @@ class PickleTrsl(object):
 
 			key = stack.pop()
 			temp = nodes[key]
-			try:
-				temp.dist = tree[key]['dist']
-				temp.predictor_variable_index = int(tree[key]['predictor_variable_index'])
-				temp.absolute_entropy = float(tree[key]['absolute_entropy'])
-				temp.probabilistic_entropy = float(tree[key]['probabilistic_entropy'])
-				temp.depth = int(tree[key]['depth'])
-				temp.probability = float(tree[key]['probability'])
-				temp.best_question = Question()
-				temp.best_question.avg_conditional_entropy = float(tree[key]['avg_conditional_entropy'])
-				temp.best_question.reduction = float(tree[key]['reduction'])
-				if tree[key]['parent'] is None:
-					temp.parent = None
-				else:
-					temp.parent = nodes[tree[key]['parent']]
-				temp.set = set(tree[key]['set'])
+			self.__set_data(tree, temp, key)
+			temp.parent = None if tree[key]['parent'] is None else nodes[tree[key]['parent']]
+
+			if  tree[key]['lchild'] is not None or tree[key]['rchild'] is not None:
 				nodes[str(tree[key]['lchild'])] = Node()
 				nodes[str(tree[key]['rchild'])] = Node()
-				temp.lchild = nodes[str(tree[key]['lchild'])]
-				temp.rchild = nodes[str(tree[key]['rchild'])]
+				temp.lchild = nodes[tree[key]['lchild']]
+				temp.rchild = nodes[tree[key]['rchild']]
 				stack.append(tree[key]['lchild'])
 				stack.append(tree[key]['rchild'])
-			except KeyError:
-				continue
+			else:
+				temp.lchild = None
+				temp.rchild = None
+
+		trsl_instance.current_leaf_nodes = []
+		for leaf in pickled_data['current_leaf_nodes']:
+			trsl_instance.current_leaf_nodes.append(nodes[str(leaf)])

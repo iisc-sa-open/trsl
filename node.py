@@ -135,3 +135,11 @@ class Node(object):
             entropy += -probability_of_info_gain
 
         return entropy
+
+    def is_leaf(self):
+
+        # Check any one leaf node suffices
+        if self.rchild is not None or self.lchild is not None:
+            return False
+        else:
+            return True
