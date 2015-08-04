@@ -257,6 +257,7 @@ class Trsl(object):
             into a file for future use
         """
 
+        logging.info("Serialised Data and stored as " + self.filename+".dat")
         open(filename, "w").write(PickleTrsl().serialise(self))
         #open(filename, "wb").write(pickle.dumps(self.root))
 
@@ -266,7 +267,10 @@ class Trsl(object):
             is written in a file to the memory
         """
 
-        PickleTrsl().deserialise(self, open(self.filename+".dat","r").read())
+        f = open(self.filename+".dat","r")
+        data = f.read()
+        f.close()
+        PickleTrsl().deserialise(self, data)
         #self.root = pickle.loads(open(filename, "rb").read())
 
     def tree_walk(self, seed, no_of_words):
