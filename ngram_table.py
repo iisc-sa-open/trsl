@@ -17,19 +17,28 @@ class NGramTable(object):
             self.ngram_window_size ->   The n in the ngram :D
     """
 
-    def __init__(self, arr, n):
+    def __init__(self, sentences, n):
 
-        self.array = arr
+        self.sentences = sentences
         self.ngram_window_size = n
 
-    def __len__(self):
+    def generate_all_ngram_indices(self):
 
-        return len(self.array) - (self.ngram_window_size - 1)
+        for sentence_index in xrange(len(self.sentences)):
+            for ngram_index in xrange(len(self.sentences[sentence_index]) - (self.ngram_window_size - 1)):
+                yield (sentence_index, ngram_index)
 
     def __getitem__(self, tup):
 
-        row, col = tup
-        if row < (len(self.array) - (self.ngram_window_size - 1)) and col < self.ngram_window_size:
-            return self.array[row + col]
+        sentence_index, ngram_index, word_index = tup
+
+        if sentence_index < len(self.sentences):
+            if ngram_index < ( len(self.sentences[sentence_index]) - (self.ngram_window_size - 1) ):
+                if word_index < self.ngram_window_size:
+                    return self.sentences[sentence_index][ngram_index + word_index]
+                else:
+                    raise KeyError('Word index out of range')
+            else:
+                raise KeyError('Ngram index out of range')
         else:
-            raise KeyError
+            raise KeyError('Sentence index out of range')

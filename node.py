@@ -23,7 +23,7 @@ class Node(object):
         self.set = None
         self.dist = None
         self.predictor_variable_index = None
-        self.row_fragment_indices = None
+        self.row_fragment_indices = []
         self.probabilistic_entropy = 0
         self.absolute_entropy = 0
         self.parent = None
@@ -105,19 +105,19 @@ class Node(object):
             does not belong to set
         """
 
-        for table_index in self.row_fragment_indices:
-            predictor_word = ngram_table[table_index, x_index]
+        for sentence_index, ngram_index in self.row_fragment_indices:
+            predictor_word = ngram_table[sentence_index, ngram_index, x_index]
             target_word = ngram_table[
-                table_index, ngram_table.ngram_window_size-1
+                sentence_index, ngram_index, ngram_table.ngram_window_size-1
             ]
             if predictor_word == set_index:
-                question.b_indices.append(table_index)
+                question.b_indices.append((sentence_index, ngram_index))
                 try:
                     question.b_dist[target_word] += 1.0
                 except KeyError:
                     question.b_dist[target_word] = 1.0
             else:
-                question.nb_indices.append(table_index)
+                question.nb_indices.append((sentence_index, ngram_index))
                 try:
                     question.nb_dist[target_word] += 1.0
                 except KeyError:

@@ -81,7 +81,7 @@ class PickleTrsl(object):
 		temp.best_question.reduction = float(tree[key]['reduction'])
 		temp.predictor_variable_index = tree[key]['predictor_variable_index']
 		temp.set = None if tree[key]['set'] is None else set(tree[key]['set'])
-		temp.row_fragment_indices = tree[key]['row_fragment_indices']
+		temp.row_fragment_indices = map(tuple ,tree[key]['row_fragment_indices'])
 
 	def deserialise(self, trsl_instance, json_data):
 

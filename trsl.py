@@ -124,9 +124,9 @@ class Trsl(object):
     def __calculate_word_dist(self, leaf):
 
         dist = {}
-        for i in leaf.row_fragment_indices:
+        for sentence_index, ngram_index in leaf.row_fragment_indices:
              target_word = self.word_ngram_table[
-                 i, self.word_ngram_table.ngram_window_size-1
+                 sentence_index, ngram_index, self.word_ngram_table.ngram_window_size-1
              ]
              try:
                  dist[target_word] += 1.0
@@ -200,20 +200,17 @@ class Trsl(object):
         """
         self.root.dist = {}
         self.root.probability = 1
-        for index in range(0, len(self.ngram_table)):
+        for sentence_index, ngram_index in self.ngram_table.generate_all_ngram_indices():
             try:
                 self.root.dist[
-                    self.ngram_table[index, self.ngram_window_size-1]
+                    self.ngram_table[sentence_index, ngram_index, self.ngram_window_size-1]
                     ] += 1.0
             except KeyError:
                 self.root.dist[
-                    self.ngram_table[index, self.ngram_window_size-1]
+                    self.ngram_table[sentence_index, ngram_index, self.ngram_window_size-1]
                     ] = 1.0
 
-        # todo check if computes through entrie ds or not
-        self.root.row_fragment_indices = [
-            x for x in range(0, len(self.ngram_table))
-        ]
+            self.root.row_fragment_indices.append((sentence_index, ngram_index))
 
         for key in self.root.dist.keys():
             frequency = self.root.dist[key]
@@ -257,7 +254,7 @@ class Trsl(object):
         eval_question = partial(curr_node.eval_question, self.ngram_table)
         questions = map(eval_question, self.__generate_pred_var_set_pairs())
         curr_node.best_question = min(questions, key=lambda question: question.avg_conditional_entropy if len(question.b_indices) > self.samples and len(question.nb_indices) > self.samples else float('inf'))
-        if len(curr_node.best_question.b_indices) <= self.samples or len(curr_node.best_question.nb_indices) <= self.samples:
+        if len(curr_node.best_question.b_indices) <= self.samples or len(curr_node.best_question.b_indices) <= self.samples:
             curr_node.reduction = 0
         else:
             logging.debug("Reduction: %s, (%s,%s)"

@@ -2,9 +2,9 @@
     Preprocesses the data for trsl construction
 """
 
-from nltk.tokenize import RegexpTokenizer
+from nltk.tokenize import RegexpTokenizer, sent_tokenize
 from ngram_table import NGramTable
-
+import copy
 
 def preprocess(filename, ngram_window_size, sets):
     """
@@ -16,26 +16,28 @@ def preprocess(filename, ngram_window_size, sets):
         Input arguments -> filename with corpus data, ngram window size.
     """
 
-    corpus = open(filename, "r").read()
-    tokenizer = RegexpTokenizer(r'\w+(\'\w+)?')
-    tokenized_corpus = tokenizer.tokenize(corpus.lower())
+    corpus = open(filename, "r").read().lower()
+    sentences = sent_tokenize(corpus)
+    tokenizer = RegexpTokenizer(r'(\w+(\'\w+)?)|\.')
+    tokenized_corpus = filter(lambda x: len(x) >= ngram_window_size , map(tokenizer.tokenize, sentences))
     word_ngram_table = NGramTable(tokenized_corpus, ngram_window_size)
     set_reverse_index = {}
     
     # Make a copy of the tokens, so we can just deal with set indices
     # henceforth. The actual words are needed again to compute word
     # probabilities at leaf nodes after the tree has stopped growing
-    tokenized_corpus = list(tokenized_corpus)
+    tokenized_corpus = copy.deepcopy(tokenized_corpus)
     for i in xrange(len(sets)):
         for word in sets[i]:
             set_reverse_index[word] = i
     sets.append([])
     for i in xrange(len(tokenized_corpus)):
-        try:
-            tokenized_corpus[i] = set_reverse_index[tokenized_corpus[i]]
-        except KeyError:
-            sets[- 1].append(tokenized_corpus[i])
-            set_reverse_index[tokenized_corpus[i]] = len(sets) - 1
-            tokenized_corpus[i] = len(sets) - 1
+        for j in xrange(len(tokenized_corpus[i])):
+            try:
+                tokenized_corpus[i][j] = set_reverse_index[tokenized_corpus[i][j]]
+            except KeyError:
+                sets[-1].append(tokenized_corpus[i][j])
+                set_reverse_index[tokenized_corpus[i][j]] = len(sets) - 1
+                tokenized_corpus[i][j] = len(sets) - 1
     ngram_table = NGramTable(tokenized_corpus, ngram_window_size)
     return (ngram_table, word_ngram_table, sets, set_reverse_index)
