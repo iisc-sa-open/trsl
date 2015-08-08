@@ -96,7 +96,7 @@ class PickleTrsl(object):
 		trsl_instance.word_sets = []
 		for set_data in pickled_data['word_sets']:
 			trsl_instance.word_sets.append(set(set_data))
-		trsl_instance.root = Node()
+		trsl_instance.root = Node(trsl_instance.ngram_window_size)
 		tree = pickled_data['tree']
 
 		stack = [pickled_data['root']]
@@ -109,8 +109,8 @@ class PickleTrsl(object):
 			temp.parent = None if tree[key]['parent'] is None else nodes[tree[key]['parent']]
 
 			if  tree[key]['lchild'] is not None or tree[key]['rchild'] is not None:
-				nodes[str(tree[key]['lchild'])] = Node()
-				nodes[str(tree[key]['rchild'])] = Node()
+				nodes[str(tree[key]['lchild'])] = Node(trsl_instance.ngram_window_size)
+				nodes[str(tree[key]['rchild'])] = Node(trsl_instance.ngram_window_size)
 				temp.lchild = nodes[tree[key]['lchild']]
 				temp.rchild = nodes[tree[key]['rchild']]
 				stack.append(tree[key]['lchild'])

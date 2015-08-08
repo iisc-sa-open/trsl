@@ -65,7 +65,7 @@ class Trsl(object):
         logging.info("No of Samples: %s", samples)
         self.reduction_threshold = reduction_threshold
         self.ngram_window_size = ngram_window_size
-        self.root = Node()
+        self.root = Node(ngram_window_size)
         self.previous_best_questions = set()
         self.no_of_nodes = 1
         self.ngram_table = None
@@ -154,7 +154,8 @@ class Trsl(object):
         node_to_split.predictor_variable_index = (
             node_to_split.best_question.predictor_variable_index
         )
-        node_to_split.lchild = Node()
+        node_to_split.lchild = Node(self.ngram_window_size)
+        node_to_split.lchild.set_known_predvars[node_to_split.predictor_variable_index] = True
         node_to_split.lchild.parent = node_to_split
         node_to_split.lchild.row_fragment_indices = node_to_split.best_question.b_indices
         node_to_split.lchild.probability = node_to_split.best_question.b_probability
@@ -163,7 +164,7 @@ class Trsl(object):
         node_to_split.lchild.dist = node_to_split.best_question.b_dist
         node_to_split.lchild.depth = node_to_split.depth + 1
 
-        node_to_split.rchild = Node()
+        node_to_split.rchild = Node(self.ngram_window_size)
         node_to_split.rchild.parent = node_to_split
         node_to_split.rchild.row_fragment_indices = node_to_split.best_question.nb_indices
         node_to_split.rchild.probability = node_to_split.best_question.nb_probability

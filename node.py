@@ -16,7 +16,7 @@ class Node(object):
         todo: Evaluate if a named tuple or dictionary would suffice
     """
 
-    def __init__(self):
+    def __init__(self, ngram_window_size):
 
         self.lchild = None
         self.rchild = None
@@ -30,6 +30,7 @@ class Node(object):
         self.depth = 0
         self.probability = 0
         self.best_question = None
+        self.set_known_predvars = [False for x in xrange(ngram_window_size - 1)]
 
     def question_already_asked(self, x_index, set_index):
         """
@@ -61,6 +62,12 @@ class Node(object):
         question = Question()
         if self.question_already_asked(x_index, set_index):
             #The reduction is set to 0 by default for a question
+            return question
+
+        if self.set_known_predvars[x_index]:
+            # We already know what set this predictor variable belongs to in
+            # this node's slice of data. So no point asking this question
+            # The reduction is set to 0 by default for a question
             return question
 
         question.set = set_index
