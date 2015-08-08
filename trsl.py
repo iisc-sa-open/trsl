@@ -256,7 +256,7 @@ class Trsl(object):
         eval_question = partial(curr_node.eval_question, self.ngram_table)
         questions = map(eval_question, self.__generate_pred_var_set_pairs())
         curr_node.best_question = min(questions, key=lambda question: question.avg_conditional_entropy if len(question.b_indices) > self.samples and len(question.nb_indices) > self.samples else float('inf'))
-        if len(curr_node.b_indices) <= self.samples or len(curr_node.nb_indices) <= self.samples:
+        if len(curr_node.best_question.b_indices) <= self.samples or len(curr_node.best_question.nb_indices) <= self.samples:
             curr_node.reduction = 0
         else:
             logging.debug("Reduction: %s, (%s,%s)"
