@@ -33,7 +33,8 @@ class Trsl(object):
             filename=None,
             ngram_window_size=None,
             reduction_threshold=None,
-            set_filename=None
+            set_filename=None,
+            samples = None
         ):
 
         if ((filename is None or ngram_window_size is None) or
@@ -48,7 +49,9 @@ class Trsl(object):
                     if ngram_window_size is None:
                         ngram_window_size = config.getint('Trsl', 'ngram_window_size')
                     if set_filename is None:
-                        set_filename = config.get("Trsl", 'set_filename')
+                        set_filename = config.get('Trsl', 'set_filename')
+                    if samples is None:
+                        samples = int(config.get('Trsl', 'samples'))
                 except ValueError:
                     logging.error("Error! ValueError occured in specified configuration")
                     raise ValueError
@@ -59,6 +62,7 @@ class Trsl(object):
         logging.info("Corpus Filename: %s", filename)
         logging.info("Ngram Window Size: %s", ngram_window_size)
         logging.info("Set Utilised: %s", set_filename)
+        logging.info("No of Samples: %s", samples)
         self.reduction_threshold = reduction_threshold
         self.ngram_window_size = ngram_window_size
         self.root = Node()
@@ -72,6 +76,7 @@ class Trsl(object):
         self.min_depth = float('inf')
         self.filename = filename
         self.set_filename = set_filename
+        self.samples = samples
 
     def train(self):
         """
@@ -250,8 +255,17 @@ class Trsl(object):
         #bind ngramtable to a partial function
         eval_question = partial(curr_node.eval_question, self.ngram_table)
         questions = map(eval_question, self.__generate_pred_var_set_pairs())
-        curr_node.best_question = min(questions, key=lambda question: question.avg_conditional_entropy)
-
+        curr_node.best_question = min(questions, key=lambda question: question.avg_conditional_entropy if len(question.b_indices) > self.samples and len(question.nb_indices) > self.samples else float('inf'))
+        if len(curr_node.b_indices) <= self.samples or len(curr_node.nb_indices) <= self.samples:
+            curr_node.reduction = 0
+        else:
+            logging.debug("Reduction: %s, (%s,%s)"
+                %(
+                    curr_node.best_question.reduction,
+                    len(curr_node.best_question.b_indices),
+                    len(curr_node.best_question.nb_indices)
+                )
+            )
 
     def __build_sets(self):
         """
