@@ -7,7 +7,6 @@
 
 
 from collections import Counter
-from functools import partial
 from node import Node
 import json
 import logging
@@ -251,9 +250,14 @@ class Trsl(object):
 
 
         #bind ngramtable to a partial function
-        eval_question = partial(curr_node.eval_question, self.ngram_table)
-        questions = map(eval_question, self.__generate_pred_var_set_pairs())
-        curr_node.best_question = min(questions, key=lambda question: question.avg_conditional_entropy if len(question.b_indices) > self.samples and len(question.nb_indices) > self.samples else float('inf'))
+        curr_node.best_question = min(
+            (question for question in curr_node.generate_questions(
+                self.ngram_table,
+                self.__generate_pred_var_set_pairs
+            )),
+            key=lambda question: question.avg_conditional_entropy if len(question.b_indices) > self.samples and len(question.nb_indices) > self.samples else float('inf')
+        )
+
         if len(curr_node.best_question.b_indices) <= self.samples or len(curr_node.best_question.b_indices) <= self.samples:
             curr_node.reduction = 0
         else:

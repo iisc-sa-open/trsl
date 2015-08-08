@@ -52,50 +52,50 @@ class Node(object):
                 parent = parent.parent
         return False
 
-    def eval_question(self, ngram_table, pred_var_set_pair):
+    def generate_questions(self, ngram_table, pred_var_set_pairs_generator):
         """
             Evaluate question by computing the avg conditional entropy,
             reduction, belongs to and not belongs to probability
         """
+        for pred_var_set_pair in pred_var_set_pairs_generator():
+            x_index, set_index = pred_var_set_pair
+            question = Question()
+            if self.question_already_asked(x_index, set_index):
+                #The reduction is set to 0 by default for a question
+                yield question
 
-        x_index, set_index = pred_var_set_pair
-        question = Question()
-        if self.question_already_asked(x_index, set_index):
-            #The reduction is set to 0 by default for a question
-            return question
+            if self.set_known_predvars[x_index]:
+                # We already know what set this predictor variable belongs to in
+                # this node's slice of data. So no point asking this question
+                # The reduction is set to 0 by default for a question
+                yield question
 
-        if self.set_known_predvars[x_index]:
-            # We already know what set this predictor variable belongs to in
-            # this node's slice of data. So no point asking this question
-            # The reduction is set to 0 by default for a question
-            return question
+            question.set = set_index
+            question.predictor_variable_index = x_index
+            self.count_target_word_frequencies(ngram_table, x_index, set_index, question)
+            question.b_dist_entropy = self.frequencies_to_probabilities_and_entropy(question.b_dist)
+            question.nb_dist_entropy = self.frequencies_to_probabilities_and_entropy(question.nb_dist)
 
-        question.set = set_index
-        question.predictor_variable_index = x_index
-        self.count_target_word_frequencies(ngram_table, x_index, set_index, question)
-        question.b_dist_entropy = self.frequencies_to_probabilities_and_entropy(question.b_dist)
-        question.nb_dist_entropy = self.frequencies_to_probabilities_and_entropy(question.nb_dist)
+            size_row_fragment = (
+                len(self.row_fragment_indices)
+            )
 
-        size_row_fragment = (
-            len(self.row_fragment_indices)
-        )
+            question.b_probability =  0 if size_row_fragment is 0 else (
+                self.probability * float(len(question.b_indices))/size_row_fragment
+            )
+            question.nb_probability = 0 if size_row_fragment is 0 else (
+                self.probability * float(len(question.nb_indices))/size_row_fragment
+            )
+            question.avg_conditional_entropy = (
+                (question.b_probability * question.b_dist_entropy)
+                +
+                (question.nb_probability * question.nb_dist_entropy)
+            )
+            question.reduction = (
+                self.probabilistic_entropy - question.avg_conditional_entropy
+            )
 
-        question.b_probability =  0 if size_row_fragment is 0 else (
-            self.probability * float(len(question.b_indices))/size_row_fragment
-        )
-        question.nb_probability = 0 if size_row_fragment is 0 else (
-            self.probability * float(len(question.nb_indices))/size_row_fragment
-        )
-        question.avg_conditional_entropy = (
-            (question.b_probability * question.b_dist_entropy)
-            +
-            (question.nb_probability * question.nb_dist_entropy)
-        )
-        question.reduction = (
-            self.probabilistic_entropy - question.avg_conditional_entropy
-        )
-
-        return question
+            yield question
 
 
     def count_target_word_frequencies(self, ngram_table, x_index, set_index, question):
