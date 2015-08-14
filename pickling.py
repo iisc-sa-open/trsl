@@ -32,8 +32,6 @@ class PickleTrsl(object):
         pickled_data['no_of_nodes'] = trsl_instance.no_of_nodes
         pickled_data['reduction_threshold'] = trsl_instance.reduction_threshold
         pickled_data['ngram_window_size'] = trsl_instance.ngram_window_size
-        pickled_data['max_depth'] = trsl_instance.max_depth
-        pickled_data['min_depth'] = trsl_instance.min_depth
         pickled_data['tree'] = {}
         pickled_data['word_sets'] = []
         for set_data in trsl_instance.word_sets:
@@ -120,8 +118,6 @@ class PickleTrsl(object):
         trsl_instance.no_of_nodes = int(pickled_data['no_of_nodes'])
         trsl_instance.reduction_threshold = int(pickled_data['reduction_threshold'])
         trsl_instance.ngram_window_size = int(pickled_data['ngram_window_size'])
-        trsl_instance.max_depth = pickled_data['max_depth']
-        trsl_instance.min_depth = pickled_data['min_depth']
         trsl_instance.word_sets = []
         for set_data in pickled_data['word_sets']:
             trsl_instance.word_sets.append(set(set_data))

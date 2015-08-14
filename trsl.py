@@ -16,7 +16,7 @@ import logging
 import math
 import preprocess   # todo check for namespace pollution
 import random
-import pickle
+import os
 from pickling import PickleTrsl
 import ConfigParser
 
@@ -32,36 +32,44 @@ class Trsl(object):
 
     def __init__(
             self,
-            filename=None,
-            ngram_window_size=None,
-            reduction_threshold=None,
-            set_filename=None,
-            samples = None
+            ngram_window_size=6,
+            reduction_threshold=100,
+            samples=10,
+            config=None,
+            model=None,
+            corpus=None,
+            set_filename="./datasets/Inaugural-Speeches/Inaugural-speeches-Kmeans-8851words-100clusters.json"
         ):
 
-        if ((filename is None or ngram_window_size is None) or
-                (reduction_threshold is None or set_filename is None)):
+        if model is not None:
             config = ConfigParser.RawConfigParser()
-            if len(config.read('config.cfg')) > 0:
-                try:
-                    if reduction_threshold is None:
-                        reduction_threshold = config.getfloat('Trsl', 'reduction_threshold')
-                    if filename is None:
-                        filename = config.get('Trsl', 'corpus_filename')
-                    if ngram_window_size is None:
-                        ngram_window_size = config.getint('Trsl', 'ngram_window_size')
-                    if set_filename is None:
-                        set_filename = config.get('Trsl', 'set_filename')
-                    if samples is None:
-                        samples = int(config.get('Trsl', 'samples'))
-                except ValueError:
-                    logging.error("Error! ValueError occured in specified configuration")
-                    raise ValueError
+            if len(config.read(model)) > 0:
+                set_filename = config.get('Trsl', 'set_filename')
+                serialised_trsl = config.get('Trsl', 'serialised_trsl')
             else:
-                logging.error("Config File not found: config.cfg")
-                raise IOError
+                logging.error("Error Model file corrupted")
+                return
+        else:
+            if corpus is None:
+                logging.error("""
+                    Error, No pretrained model passed or corpus for
+                    generating the model
+                """)
+                return
+            elif config is not None:
+                config = ConfigParser.RawConfigParser()
+                if len(config.read(config)) > 0:
+                    set_filename = config.get('Trsl', 'set_filename')
+                    ngram_window_size = config.getint('Trsl', 'ngram_window_size')
+                    samples = config.getint('Trsl', 'samples')
+                    reduction_threshold = config.getfloat('Trsl', 'reduction_threshold')
+                else:
+                    logging.error("Error Model file corrupted")
+                    return
+            serialised_trsl = None
+
         logging.info("Reduction Threshold: %s", reduction_threshold)
-        logging.info("Corpus Filename: %s", filename)
+        logging.info("Corpus Filename: %s", corpus)
         logging.info("Ngram Window Size: %s", ngram_window_size)
         logging.info("Set Utilised: %s", set_filename)
         logging.info("No of Samples: %s", samples)
@@ -74,11 +82,10 @@ class Trsl(object):
         self.vocabulary_set = None
         self.word_sets = None
         self.current_leaf_nodes = []
-        self.max_depth = 0
-        self.min_depth = float('inf')
-        self.filename = filename
+        self.filename = corpus
         self.set_filename = set_filename
         self.samples = samples
+        self.serialised_trsl = serialised_trsl
 
     def train(self):
         """
@@ -87,12 +94,20 @@ class Trsl(object):
 
         """
 
-        try:
-            open(self.filename + ".dat", "r")
-            logging.info("Found dat file -> loading precomputed data")
-            self.__load(self.filename + ".dat")
-            # todo: configuration not loaded from the file, reset parameters
-        except (OSError, IOError):
+        if self.serialised_trsl is not None:
+
+            try:
+                open(self.serialised_trsl, "r")
+                logging.info("Loading precomputed trsl model")
+                self.__load(self.serialised_trsl)
+                # todo: configuration not loaded from the file, reset parameters
+            except (OSError, IOError):
+                logging.error("""
+                    Serialised json file specified in the model missing,
+                    precomputed trsl model could not be loaded.
+                """)
+                return
+        else:
             self.word_sets = self.__build_sets()
             self.ngram_table, self.word_ngram_table, self.word_sets, self.set_reverse_index = preprocess.preprocess(
                 self.filename, self.ngram_window_size, self.word_sets
@@ -116,12 +131,15 @@ class Trsl(object):
                 leaf.dist = self.__calculate_word_dist(leaf)
 
             logging.info("Total no of Nodes:"+ str(self.no_of_nodes))
-            logging.info(
-                "Max Depth: %s Min Depth: %s",
-                self.max_depth,
-                self.min_depth
-            )
-            self.__serialize(self.filename + ".dat")
+            if not os.path.exists("./model"):
+                os.makedirs("./model")
+            self.__serialize("./model/serialised_trsl.json")
+            config = ConfigParser.RawConfigParser()
+            config.add_section('Trsl')
+            config.set('Trsl', 'serialised_trsl', './model/serialised_trsl.json')
+            config.set('Trsl', 'set_filename', '.'+self.set_filename)
+            with open('./model/model', 'w') as model:
+                config.write(model)
 
     def __calculate_word_dist(self, leaf):
 
@@ -300,9 +318,7 @@ class Trsl(object):
             into a file for future use
         """
 
-        logging.info("Serialised Data and stored as " + self.filename+".dat")
         open(filename, "w").write(PickleTrsl().serialise(self))
-        #open(filename, "wb").write(pickle.dumps(self.root))
 
     def __load(self, filename):
         """
@@ -310,7 +326,7 @@ class Trsl(object):
             is written in a file to the memory
         """
 
-        f = open(self.filename+".dat","r")
+        f = open(filename,"r")
         data = f.read()
         f.close()
         PickleTrsl().deserialise(self, data)
