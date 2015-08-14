@@ -1,4 +1,7 @@
-#! /usr/bin/env python2
+#! /usr/bin/env/python2
+# -*- coding: utf-8 -*-
+# Copyright of the Indian Institute of Science's Speech and Audio group.
+
 """
     Node Class implemented
     todo: Add functionality to serialize and load nodes,
@@ -80,7 +83,7 @@ class Node(object):
                 len(self.row_fragment_indices)
             )
 
-            question.b_probability =  0 if size_row_fragment is 0 else (
+            question.b_probability = 0 if size_row_fragment is 0 else (
                 self.probability * float(len(question.b_indices))/size_row_fragment
             )
             question.nb_probability = 0 if size_row_fragment is 0 else (
@@ -144,6 +147,10 @@ class Node(object):
         return entropy
 
     def is_leaf(self):
+        """
+            Checks if the current node is a leafnode or an internal node
+            by checking if it has any children or not
+        """
 
         # Check any one leaf node suffices
         if self.rchild is not None or self.lchild is not None:

@@ -1,4 +1,7 @@
-#! /usr/bin/env python2
+#! /usr/bin/env/python2
+# -*- coding: utf-8 -*-
+# Copyright of the Indian Institute of Science's Speech and Audio group.
+
 """
     Utilised for calculating reduction
 """

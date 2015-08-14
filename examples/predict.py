@@ -1,11 +1,10 @@
 #! /usr/bin/env/python2
-"""
-    A test writen with the same data and parameters used
-    to validate with the manual calculations present in
-    last_question_hand_calcs.ods
+# -*- coding: utf-8 -*-
+# Copyright of the Indian Institute of Science's Speech and Audio group.
 
-    The sets returned from Trsl.build_sets have also been
-    stubbed to be the same as the one used for the manual calculations.
+"""
+    Example for prediction of the target variable based on the provided
+    predictor variables using trsl instance
 """
 
 
@@ -70,7 +69,7 @@ if __name__ == "__main__":
     trsl_instance.train()
     NEW_TIME = time.time()
     trsl.logging.info("Execution Time : "+str(NEW_TIME - OLD_TIME))
-    #trsl_instance.tree_walk(["It", "was", "now", "some" ,"time"], 10)
+
     while True:
         print "\nEnter predictor words to predict the next:"
         print "Ten most likely words:"+str(

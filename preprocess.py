@@ -1,3 +1,7 @@
+#! /usr/bin/env/python2
+# -*- coding: utf-8 -*-
+# Copyright of the Indian Institute of Science's Speech and Audio group.
+
 """
     Preprocesses the data for trsl construction
 """
@@ -19,10 +23,13 @@ def preprocess(filename, ngram_window_size, sets):
     corpus = open(filename, "r").read().lower()
     sentences = sent_tokenize(corpus)
     tokenizer = RegexpTokenizer(r'(\w+(\'\w+)?)|\.')
-    tokenized_corpus = filter(lambda x: len(x) >= ngram_window_size , map(tokenizer.tokenize, sentences))
+    tokenized_corpus = filter(
+        lambda x: len(x) >= ngram_window_size,
+        map(tokenizer.tokenize, sentences)
+    )
     word_ngram_table = NGramTable(tokenized_corpus, ngram_window_size)
     set_reverse_index = {}
-    
+
     # Make a copy of the tokens, so we can just deal with set indices
     # henceforth. The actual words are needed again to compute word
     # probabilities at leaf nodes after the tree has stopped growing

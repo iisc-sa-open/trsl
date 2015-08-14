@@ -1,3 +1,7 @@
+#! /usr/bin/env/python2
+# -*- coding: utf-8 -*-
+# Copyright of the Indian Institute of Science's Speech and Audio group.
+
 import logging
 import trsl
 import node
@@ -5,6 +9,8 @@ import math
 import json
 from collections import Counter
 from matplotlib import pyplot as plt
+from nltk.tokenize import RegexpTokenizer
+import code
 
 logger = logging.getLogger()
 handler = logging.StreamHandler()
@@ -19,21 +25,19 @@ trsl_instance.train()
 logging.info("Loading Complete")
 leaf_nodes = []
 sets = []
-sets_count  = [ 0 for x in range(0,101)] # numsets
-xi = [ 0 for x in range(0,5)]
+sets_count = [0 for x in range(0, 500)] # numsets
+xi = [0 for x in range(0, 10)]
 length_fragment_row_indices_list = []
 depth_list = []
 
 def compute_avg_entropy():
 
-    global trsl_instance, tree_data, length_fragment_row_indices_list, depth_list
+    global trsl_instance, tree_data, length_fragment_row_indices_list, depth_list, sets_count, sets, xi
 
     bfs([trsl_instance.root])
     plt.xlabel("Level Avg Entropy vs Level.png")
     plt.ylabel("Avg Entropy")
-    plt.plot(range(0,len(tree_data)), map(lambda x: x['avg_entropy'], tree_data),label="Probabilistic Avg Entropy")
-    #plt.plot(range(0,len(tree_data)), map(lambda x: x['max_entropy'], tree_data), label="Absolute Max Entropy")
-    #plt.plot(range(0,len(tree_data)), map(lambda x: x['min_entropy'], tree_data), label="Absolute Min Entropy")
+    plt.plot(range(0, len(tree_data)), map(lambda x: x['avg_entropy'], tree_data), label="Probabilistic Avg Entropy")
     plt.legend()
     plt.savefig(
         "Avg Entropy vs Level.png"
@@ -41,17 +45,9 @@ def compute_avg_entropy():
     plt.figure()
     plt.xlabel("Level")
     plt.ylabel("log2(No of Nodes)")
-    plt.plot(range(0,len(tree_data)), map(lambda x: math.log(x['no_of_nodes'],2), tree_data))
+    plt.plot(range(0, len(tree_data)), map(lambda x: math.log(x['no_of_nodes'], 2), tree_data))
     plt.savefig(
         "No of Nodes vs Level.png"
-    )
-
-    plt.figure()
-    plt.xlabel("Predictor Variable index")
-    plt.ylabel("No of Questions")
-    plt.bar(range(0,5), xi)
-    plt.savefig(
-        "Xi vs no of questions.png"
     )
 
     plt.figure()
@@ -65,12 +61,38 @@ def compute_avg_entropy():
     plt.figure()
     plt.xlabel("Set index")
     plt.ylabel("No of Questions")
-    plt.plot(range(0,len(sets_count)), sets_count)
+    plt.bar(range(0, len(sets_count)), sets_count)
     plt.savefig(
         "Set index vs no of questions.png"
     )
-    open(trsl_instance.filename+".set_index","w").write(json.dumps(zip(map(list,sets),sets_count)))
+    open(trsl_instance.filename+".set_index", "w").write(json.dumps(zip(map(list, sets), sets_count)))
 
+    plt.figure()
+    tokenizer = RegexpTokenizer(r'(\w+(\'\w+)?)|\.')
+    common_words = Counter(tokenizer.tokenize(open(trsl_instance.filename, "r").read().lower()))
+    sets_avg_freq = []
+
+    for s in sets:
+        temp_list = []
+        for word in s:
+            temp_list.append(common_words[word])
+        temp_list.sort()
+        sets_avg_freq.append(temp_list[len(temp_list)/2])
+    plt.xlabel("Median frequency of words in set")
+    plt.ylabel("No of Questions")
+    plt.bar(sets_avg_freq, sets_count[:len(sets)])
+    plt.savefig(
+        "Median Freq of set vs no of questions.png"
+    )
+
+
+    plt.figure()
+    plt.xlabel("Predictor Variable index")
+    plt.ylabel("No of Questions")
+    plt.bar(range(0, 10), xi)
+    plt.savefig(
+        "Xi vs no of questions.png"
+    )
 
 def bfs(node_list):
 
@@ -100,8 +122,6 @@ def bfs(node_list):
         {
             'avg_entropy': probabilistic_average_entropy,
             'no_of_nodes': len(node_list)
-            #'max_entropy': max(node_list, key=lambda x: x.absolute_entropy).absolute_entropy,
-            #'min_entropy': min(node_list, key=lambda x: x.absolute_entropy).absolute_entropy
         }
     )
     if len(children) is not 0:

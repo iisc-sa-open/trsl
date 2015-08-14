@@ -1,4 +1,7 @@
 #! /usr/bin/env/python2
+# -*- coding: utf-8 -*-
+# Copyright of the Indian Institute of Science's Speech and Audio group.
+
 """
     Example to create and load a trsl instance, train the same
     and perform a random tree walk with the trsl instance
