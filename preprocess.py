@@ -16,17 +16,22 @@ def preprocess(filename, ngram_window_size, sets):
         * Tokenizes the data based on punctuation and spaces.
         * Constructs the ngram table based on the specified ngram window size.
         * Constructs a vocabulary set from the tokenized corpus.
-        Return type -> Tuple( ngram table, vocabulary set)
-        Input arguments -> filename with corpus data, ngram window size.
+        Return type:
+            Tuple( ngram table, vocabulary set)
+        Arguments:
+            filename with corpus data, ngram window size, sets
     """
 
     corpus = open(filename, "r").read().lower()
+    # sentence tokenize the given corpus
     sentences = sent_tokenize(corpus)
+    # word tokenize the given list of sentences
     tokenizer = RegexpTokenizer(r'(\w+(\'\w+)?)|\.')
     tokenized_corpus = filter(
         lambda x: len(x) >= ngram_window_size,
         map(tokenizer.tokenize, sentences)
     )
+    # instantiate NGramTable for the given corpus based on ngram window size
     word_ngram_table = NGramTable(tokenized_corpus, ngram_window_size)
     set_reverse_index = {}
 

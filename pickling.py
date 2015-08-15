@@ -25,6 +25,7 @@ class PickleTrsl(object):
             Serialization of the trsl instance into a json string
         """
 
+        # Storing trsl attributes for retrieval
         pickled_data = {}
         pickled_data['filename'] = trsl_instance.filename
         pickled_data['root'] = str(id(trsl_instance.root))
@@ -34,35 +35,48 @@ class PickleTrsl(object):
         pickled_data['ngram_window_size'] = trsl_instance.ngram_window_size
         pickled_data['tree'] = {}
         pickled_data['word_sets'] = []
+
+        # Storing word_sets of the trsl instance
         for set_data in trsl_instance.word_sets:
             pickled_data['word_sets'].append(list(set_data))
         pickled_data['current_leaf_nodes'] = []
+
+        # Storing all trsl leaf nodes id as a list
         for leaf in trsl_instance.current_leaf_nodes:
             pickled_data['current_leaf_nodes'].append(str(id(leaf)))
         tree = pickled_data['tree']
+
+        # Stack pushed with the root node initially for bfs traversal
         stack = [trsl_instance.root]
         tree[str(id(trsl_instance.root))] = {}
+
+        # Storing the root node attributes
         self.__save_data(tree, trsl_instance.root)
         tree[str(id(trsl_instance.root))]['lchild'] = None
         tree[str(id(trsl_instance.root))]['rchild'] = None
         tree[str(id(trsl_instance.root))]['parent'] = None
 
+        # BFS traversal for flattening and storing all the attributes of all nodes
         while len(stack) is not 0:
             node = stack.pop()
             if node is not None:
+                # current node is internal node
                 if not node.is_leaf():
                     tree[str(id(node))]['lchild'] = str(id(node.lchild))
                     tree[str(id(node.lchild))] = {'parent':str(id(node))}
                     self.__save_data(tree, node.lchild)
                     if not node.lchild.is_leaf():
+                        # children nodes are internal nodes
                         stack.append(node.lchild)
                     else:
+                        # children nodes are leafnodes
                         tree[str(id(node.lchild))]['lchild'] = None
                         tree[str(id(node.lchild))]['rchild'] = None
 
                     tree[str(id(node))]['rchild'] = str(id(node.rchild))
                     tree[str(id(node.rchild))] = {'parent':str(id(node))}
                     self.__save_data(tree, node.rchild)
+                    # if children are internal nodes push into stack
                     if not node.rchild.is_leaf():
                         stack.append(node.rchild)
                     else:
@@ -74,7 +88,7 @@ class PickleTrsl(object):
     def __save_data(self, tree, node):
         """
             Store the individual attributes of the node into the
-            json string
+            json string.
         """
 
         tree[str(id(node))]['dist'] = node.dist
@@ -113,26 +127,36 @@ class PickleTrsl(object):
         """
 
         pickled_data = json.loads(json_data)
+
+        # Retrieval of trsl attribtes that are stored
         trsl_instance.filename = pickled_data['filename']
         trsl_instance.set_filename = pickled_data['set_filename']
         trsl_instance.no_of_nodes = int(pickled_data['no_of_nodes'])
         trsl_instance.reduction_threshold = int(pickled_data['reduction_threshold'])
         trsl_instance.ngram_window_size = int(pickled_data['ngram_window_size'])
         trsl_instance.word_sets = []
+
+        # Retrieval of word_sets for the trsl from the json_data
         for set_data in pickled_data['word_sets']:
             trsl_instance.word_sets.append(set(set_data))
         trsl_instance.root = Node(trsl_instance.ngram_window_size)
         tree = pickled_data['tree']
 
+        # Push the root node in the stack
         stack = [pickled_data['root']]
+
+        # nodes stores all the nodes with their corresponding id's
         nodes = {pickled_data['root']:trsl_instance.root}
         while len(stack) is not 0:
 
             key = stack.pop()
             temp = nodes[key]
+
+            # Save the attributes from tree to the node
             self.__set_data(tree, temp, key)
             temp.parent = None if tree[key]['parent'] is None else nodes[tree[key]['parent']]
 
+            # if current node is internal node
             if  tree[key]['lchild'] is not None or tree[key]['rchild'] is not None:
                 nodes[str(tree[key]['lchild'])] = Node(trsl_instance.ngram_window_size)
                 nodes[str(tree[key]['rchild'])] = Node(trsl_instance.ngram_window_size)
@@ -140,10 +164,13 @@ class PickleTrsl(object):
                 temp.rchild = nodes[tree[key]['rchild']]
                 stack.append(tree[key]['lchild'])
                 stack.append(tree[key]['rchild'])
+
+            # if current node is a leaf node
             else:
                 temp.lchild = None
                 temp.rchild = None
 
+        # Store all the list(leaf nodes) of the tree in trsl
         trsl_instance.current_leaf_nodes = []
         for leaf in pickled_data['current_leaf_nodes']:
             trsl_instance.current_leaf_nodes.append(nodes[str(leaf)])

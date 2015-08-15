@@ -64,7 +64,7 @@ class Trsl(object):
                     samples = config.getint('Trsl', 'samples')
                     reduction_threshold = config.getfloat('Trsl', 'reduction_threshold')
                 else:
-                    logging.error("Error Model file corrupted")
+                    logging.error("Error config file corrupted")
                     return
             serialised_trsl = None
 
@@ -90,17 +90,19 @@ class Trsl(object):
     def train(self):
         """
             Given a filename(containing a training corpus), build a decision tree
-            which can be accessed through self.root
-
+            which can be accessed through self.root.
+            if model is given, load the model directly
+            if corpus is specified generate a model and store the same
         """
 
+        # If model is passed with trsl, load the model directly
         if self.serialised_trsl is not None:
-
+            # check if the model file exists
             try:
                 open(self.serialised_trsl, "r")
                 logging.info("Loading precomputed trsl model")
                 self.__load(self.serialised_trsl)
-                # todo: configuration not loaded from the file, reset parameters
+            # if model file does not exists
             except (OSError, IOError):
                 logging.error("""
                     Serialised json file specified in the model missing,
@@ -108,18 +110,24 @@ class Trsl(object):
                 """)
                 return
         else:
+            # If corpus is supplied and model needs to be generated
             self.word_sets = self.__build_sets()
             self.ngram_table, self.word_ngram_table, self.word_sets, self.set_reverse_index = preprocess.preprocess(
                 self.filename, self.ngram_window_size, self.word_sets
             )
+            # Compute root node attributes
             self.__set_root_state()
             self.__process_node(self.root)
             self.current_leaf_nodes.append(self.root)
+            # Process each node in trsl until a certain reduction threshold
             while not self.__stop_growing():
+                # Pick the node with the highest reduction
                 node_to_split = max(self.current_leaf_nodes, key=lambda x: x.best_question.reduction)
+                # If no reduction for the best question, stop tree growth
                 if node_to_split.best_question.reduction == 0:
                     logging.debug("Tree growing stopped, reduction no longer improving accuracy")
                     break
+                # Split the node for the YES and NO path, process them individually
                 self.__split_node(node_to_split)
                 self.current_leaf_nodes.remove(node_to_split)
                 self.__process_node(node_to_split.lchild)
@@ -127,10 +135,12 @@ class Trsl(object):
                 self.current_leaf_nodes.append(node_to_split.lchild)
                 self.current_leaf_nodes.append(node_to_split.rchild)
 
+            # Compute word probability for all the leaf nodes
             for leaf in self.current_leaf_nodes:
                 leaf.dist = self.__calculate_word_dist(leaf)
-
             logging.info("Total no of Nodes:"+ str(self.no_of_nodes))
+
+            # save the generated model with the serialised trsl
             if not os.path.exists("./model"):
                 os.makedirs("./model")
             self.__serialize("./model/serialised_trsl.json")
@@ -142,6 +152,11 @@ class Trsl(object):
                 config.write(model)
 
     def __calculate_word_dist(self, leaf):
+        """
+            Computes the word probability for the leaf node passed
+            Argument:
+                leaf -> instance of Node
+        """
 
         dist = {}
         for sentence_index, ngram_index in leaf.row_fragment_indices:
@@ -161,6 +176,11 @@ class Trsl(object):
         return dist
 
     def __split_node(self, node_to_split):
+        """
+            Receives the node to split, and creates two nodes as children
+            with the specific attributes from the node based on YES and
+            NO path
+        """
 
         self.no_of_nodes += 2
         logging.debug(
@@ -174,6 +194,8 @@ class Trsl(object):
         node_to_split.predictor_variable_index = (
             node_to_split.best_question.predictor_variable_index
         )
+
+        # YES path attributes for child node is set
         node_to_split.lchild = Node(self.ngram_window_size)
         node_to_split.lchild.set_known_predvars[node_to_split.predictor_variable_index] = True
         node_to_split.lchild.parent = node_to_split
@@ -184,6 +206,7 @@ class Trsl(object):
         node_to_split.lchild.dist = node_to_split.best_question.b_dist
         node_to_split.lchild.depth = node_to_split.depth + 1
 
+        # NO path attributes for child node is set
         node_to_split.rchild = Node(self.ngram_window_size)
         node_to_split.rchild.parent = node_to_split
         node_to_split.rchild.row_fragment_indices = node_to_split.best_question.nb_indices
@@ -194,6 +217,13 @@ class Trsl(object):
         node_to_split.rchild.depth = node_to_split.depth + 1
 
     def __stop_growing(self):
+        """
+            Stop the tree growth if the reduction threshold is reached
+            from the root node to the leaf nodes
+            Return Type:
+                True    -> Stop tree growth
+                False   -> Continue tree growth
+        """
 
         probabilistic_entropies_sum = sum(node.probabilistic_entropy for node in self.current_leaf_nodes)
         if (self.root.absolute_entropy - probabilistic_entropies_sum) * 100 / self.root.absolute_entropy  < self.reduction_threshold:
@@ -218,6 +248,7 @@ class Trsl(object):
             into row_fragment_indices since the data is not
             fragmented yet.
         """
+
         self.root.dist = {}
         self.root.probability = 1
         for sentence_index, ngram_index in self.ngram_table.generate_all_ngram_indices():
@@ -232,6 +263,7 @@ class Trsl(object):
 
             self.root.row_fragment_indices.append((sentence_index, ngram_index))
 
+        # Compute root node entropy, probability
         for key in self.root.dist.keys():
             frequency = self.root.dist[key]
             probability = frequency/len(self.root.row_fragment_indices)
@@ -259,18 +291,12 @@ class Trsl(object):
             Used to process curr_node by computing best reduction
             and choosing to create children nodes or not based on
             self.reduction_threshold
-
-            Naming Convention:
-                *    nb  -> Not belongs the the selected set
-                *    b   -> Belongs to the selected set
-                *    Xi  -> Predictor variable index into the ngram table
-                *    Si  -> Set
-                *    cnb -> current node not belongs to the selected set
-                *    cb  -> current node belongs to the set
         """
 
 
-        #bind ngramtable to a partial function
+        # Bind ngramtable to a partial function
+
+        # Pick the node which gives you the lease avg_conditional_entropy in the child nodes
         curr_node.best_question = min(
             (question for question in curr_node.generate_questions(
                 self.ngram_table,
@@ -367,8 +393,9 @@ class Trsl(object):
         temp = self.root
         steps = 0
         while True:
+            # if node is internal node
             if temp.rchild is not None:
-                # since the decision tree is  a full binary tree, both children exist
+                # Since the decision tree is  a full binary tree, both children exist
                 steps += 1
                 if predictor_variable_list[temp.predictor_variable_index] in temp.set:
                     logging.debug(
@@ -380,6 +407,7 @@ class Trsl(object):
                         temp.set
                     )
                     temp = temp.lchild
+                # if node is leaf node
                 else:
                     logging.debug(
                         "LEVEL: %s, X%s = %s belongs to %s? NO",

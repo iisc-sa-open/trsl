@@ -3,7 +3,9 @@
 # Copyright of the Indian Institute of Science's Speech and Audio group.
 
 """
-    Utilised for calculating reduction
+    Utilised for calculating reduction for each node
+    Helps stores all the required attributes regarding
+    the question asked in each node
 """
 
 
@@ -12,6 +14,10 @@ class Question(object):
         Stores all the data that results from asking a question
         at a particular node
         todo : maybe a dict or named tuple will suffice
+
+        Naming Convention:
+            *    nb  -> Not belongs the the selected set
+            *    b   -> Belongs to the selected set
     """
 
     def __init__(self):
