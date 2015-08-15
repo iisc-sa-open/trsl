@@ -14,7 +14,7 @@ import os
 import sys
 import time
 import logging
-
+from collections import Counter
 from trsl import Trsl
 
 def args_parser():
@@ -86,9 +86,11 @@ def args_parser():
     )
     print("Predict -> Enter a sentence: ")
     print(
-        trsl_instance.predict(
-            raw_input().split()
-        )
+        Counter(
+            trsl_instance.predict(
+                raw_input().split()
+            )
+        ).most_common(n=10)
     )
 
 def init_logger(args):

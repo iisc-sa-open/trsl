@@ -37,7 +37,7 @@ def compute_avg_entropy():
     bfs([trsl_instance.root])
     plt.xlabel("Level Avg Entropy vs Level.png")
     plt.ylabel("Avg Entropy")
-    plt.plot(range(0, len(tree_data)), map(lambda x: x['avg_entropy'], tree_data), label="Probabilistic Avg Entropy")
+    plt.plot(xrange(0, len(tree_data)), map(lambda x: x['avg_entropy'], tree_data), label="Probabilistic Avg Entropy")
     plt.legend()
     plt.savefig(
         "Avg Entropy vs Level.png"
@@ -45,7 +45,7 @@ def compute_avg_entropy():
     plt.figure()
     plt.xlabel("Level")
     plt.ylabel("log2(No of Nodes)")
-    plt.plot(range(0, len(tree_data)), map(lambda x: math.log(x['no_of_nodes'], 2), tree_data))
+    plt.plot(xrange(0, len(tree_data)), map(lambda x: math.log(x['no_of_nodes'], 2), tree_data))
     plt.savefig(
         "No of Nodes vs Level.png"
     )
@@ -61,7 +61,7 @@ def compute_avg_entropy():
     plt.figure()
     plt.xlabel("Set index")
     plt.ylabel("No of Questions")
-    plt.bar(range(0, len(sets_count)), sets_count)
+    plt.bar(xrange(0, len(sets_count)), sets_count)
     plt.savefig(
         "Set index vs no of questions.png"
     )

@@ -33,6 +33,7 @@ class PickleTrsl(object):
         pickled_data['no_of_nodes'] = trsl_instance.no_of_nodes
         pickled_data['reduction_threshold'] = trsl_instance.reduction_threshold
         pickled_data['ngram_window_size'] = trsl_instance.ngram_window_size
+        pickled_data['samples'] = trsl_instance.samples
         pickled_data['tree'] = {}
         pickled_data['word_sets'] = []
 
@@ -134,6 +135,7 @@ class PickleTrsl(object):
         trsl_instance.no_of_nodes = int(pickled_data['no_of_nodes'])
         trsl_instance.reduction_threshold = int(pickled_data['reduction_threshold'])
         trsl_instance.ngram_window_size = int(pickled_data['ngram_window_size'])
+        trsl_instance.samples = int(pickled_data['samples'])
         trsl_instance.word_sets = []
 
         # Retrieval of word_sets for the trsl from the json_data

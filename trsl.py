@@ -9,7 +9,7 @@
 """
 
 
-from collections import Counter
+from collections import Counter, defaultdict
 from node import Node
 import json
 import logging
@@ -68,11 +68,6 @@ class Trsl(object):
                     return
             serialised_trsl = None
 
-        logging.info("Reduction Threshold: %s", reduction_threshold)
-        logging.info("Corpus Filename: %s", corpus)
-        logging.info("Ngram Window Size: %s", ngram_window_size)
-        logging.info("Set Utilised: %s", set_filename)
-        logging.info("No of Samples: %s", samples)
         self.reduction_threshold = reduction_threshold
         self.ngram_window_size = ngram_window_size
         self.root = Node(ngram_window_size)
@@ -102,6 +97,11 @@ class Trsl(object):
                 open(self.serialised_trsl, "r")
                 logging.info("Loading precomputed trsl model")
                 self.__load(self.serialised_trsl)
+                logging.info("Reduction Threshold: %s", self.reduction_threshold)
+                logging.info("Corpus Filename: %s", self.filename)
+                logging.info("Ngram Window Size: %s", self.ngram_window_size)
+                logging.info("Set Utilised: %s", self.set_filename)
+                logging.info("No of Samples: %s", self.samples)
             # if model file does not exists
             except (OSError, IOError):
                 logging.error("""
@@ -110,6 +110,11 @@ class Trsl(object):
                 """)
                 return
         else:
+            logging.info("Reduction Threshold: %s", self.reduction_threshold)
+            logging.info("Corpus Filename: %s", self.filename)
+            logging.info("Ngram Window Size: %s", self.ngram_window_size)
+            logging.info("Set Utilised: %s", self.set_filename)
+            logging.info("No of Samples: %s", self.samples)
             # If corpus is supplied and model needs to be generated
             self.word_sets = self.__build_sets()
             self.ngram_table, self.word_ngram_table, self.word_sets, self.set_reverse_index = preprocess.preprocess(
@@ -141,14 +146,15 @@ class Trsl(object):
             logging.info("Total no of Nodes:"+ str(self.no_of_nodes))
 
             # save the generated model with the serialised trsl
-            if not os.path.exists("./model"):
-                os.makedirs("./model")
-            self.__serialize("./model/serialised_trsl.json")
+            file_path = "./"+self.filename.split("/")[-1]+"-model/"
+            if not os.path.exists(file_path):
+                os.makedirs(file_path)
+            self.__serialize(file_path + "serialised_trsl.json")
             config = ConfigParser.RawConfigParser()
             config.add_section('Trsl')
-            config.set('Trsl', 'serialised_trsl', './model/serialised_trsl.json')
+            config.set('Trsl', 'serialised_trsl', file_path + 'serialised_trsl.json')
             config.set('Trsl', 'set_filename', '.'+self.set_filename)
-            with open('./model/model', 'w') as model:
+            with open(file_path + 'model', 'w') as model:
                 config.write(model)
 
     def __calculate_word_dist(self, leaf):
@@ -158,15 +164,12 @@ class Trsl(object):
                 leaf -> instance of Node
         """
 
-        dist = {}
+        dist = defaultdict(lambda: 0)
         for sentence_index, ngram_index in leaf.row_fragment_indices:
              target_word = self.word_ngram_table[
                  sentence_index, ngram_index, self.word_ngram_table.ngram_window_size-1
              ]
-             try:
-                 dist[target_word] += 1.0
-             except KeyError:
-                 dist[target_word] = 1.0
+             dist[target_word] += 1.0
 
         frequency_sum = sum(dist.values())
 
@@ -249,17 +252,12 @@ class Trsl(object):
             fragmented yet.
         """
 
-        self.root.dist = {}
+        self.root.dist = defaultdict(lambda: 0)
         self.root.probability = 1
         for sentence_index, ngram_index in self.ngram_table.generate_all_ngram_indices():
-            try:
-                self.root.dist[
-                    self.ngram_table[sentence_index, ngram_index, self.ngram_window_size-1]
-                    ] += 1.0
-            except KeyError:
-                self.root.dist[
-                    self.ngram_table[sentence_index, ngram_index, self.ngram_window_size-1]
-                    ] = 1.0
+            self.root.dist[
+                self.ngram_table[sentence_index, ngram_index, self.ngram_window_size-1]
+            ] += 1.0
 
             self.root.row_fragment_indices.append((sentence_index, ngram_index))
 
@@ -283,7 +281,7 @@ class Trsl(object):
         """
 
         for x_index in range(0, self.ngram_window_size-1):
-            for set_index in range(len(self.word_sets)):
+            for set_index in xrange(len(self.word_sets)):
                 yield (x_index, set_index)
 
     def __process_node(self, curr_node):
@@ -334,7 +332,7 @@ class Trsl(object):
         # Every element in the list needs to be a set because
         # belongs to operation utilises O(1) steps
 
-        for i in range(len(data)):
+        for i in xrange(len(data)):
             data[i] = set(data[i])
         return data
 
@@ -365,7 +363,7 @@ class Trsl(object):
             upto no_of_words prediction
         """
 
-        for index in range(no_of_words):
+        for index in xrange(no_of_words):
             dist = self.predict(seed[-(self.ngram_window_size-1)::])
             rand = random.random()
             sum = 0

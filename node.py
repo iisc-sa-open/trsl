@@ -127,17 +127,11 @@ class Node(object):
             # Target word belongs to the set
             if predictor_word == set_index:
                 question.b_indices.append((sentence_index, ngram_index))
-                try:
-                    question.b_dist[target_word] += 1.0
-                except KeyError:
-                    question.b_dist[target_word] = 1.0
+                question.b_dist[target_word] += 1.0
             # Target word does not belong to the set
             else:
                 question.nb_indices.append((sentence_index, ngram_index))
-                try:
-                    question.nb_dist[target_word] += 1.0
-                except KeyError:
-                    question.nb_dist[target_word] = 1.0
+                question.nb_dist[target_word] += 1.0
 
     def frequencies_to_probabilities_and_entropy(self, frequency_map):
         """

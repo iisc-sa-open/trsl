@@ -18,7 +18,7 @@ if __name__ == "__main__":
     set_filename = open("datasets/Inaugural-Speeches/inaugural-speeches-word-vectors.json.txt", "r").read().split("\n")
     word_list = []
     vector_list = []
-    for index in range(0, num_words):
+    for index in xrange(0, num_words):
         set_data = json.loads(set_filename[index])
         word_list.append(set_data[0])
         vector_list.append(set_data[1])
@@ -29,7 +29,7 @@ if __name__ == "__main__":
     new_time = time.time()
     print("Time taken for clustering", new_time - old_time)
 
-    k = [[] for x in range(num_clusters)]
+    k = [[] for x in xrange(num_clusters)]
     word_centroid_map = dict(zip(word_list, idx))
     for word in word_centroid_map.keys():
         k[word_centroid_map[word]].append(word)

@@ -8,6 +8,7 @@
     the question asked in each node
 """
 
+from collections import defaultdict
 
 class Question(object):
     """
@@ -24,8 +25,8 @@ class Question(object):
 
         self.b_indices = []
         self.nb_indices = []
-        self.b_dist = {}
-        self.nb_dist = {}
+        self.b_dist = defaultdict(lambda: 0)
+        self.nb_dist = defaultdict(lambda: 0)
         self.b_dist_entropy = 0
         self.nb_dist_entropy = 0
         self.reduction = 0
