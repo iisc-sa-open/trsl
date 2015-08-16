@@ -19,7 +19,9 @@ import random
 import os
 from pickling import PickleTrsl
 import ConfigParser
-
+import scipy.stats
+import numpy as np
+import operator
 
 class Trsl(object):
     """
@@ -117,7 +119,7 @@ class Trsl(object):
             logging.info("No of Samples: %s", self.samples)
             # If corpus is supplied and model needs to be generated
             self.word_sets = self.__build_sets()
-            self.ngram_table, self.word_ngram_table, self.word_sets, self.set_reverse_index = preprocess.preprocess(
+            self.ngram_table, self.word_sets= preprocess.preprocess(
                 self.filename, self.ngram_window_size, self.word_sets
             )
             # Compute root node attributes
@@ -140,9 +142,6 @@ class Trsl(object):
                 self.current_leaf_nodes.append(node_to_split.lchild)
                 self.current_leaf_nodes.append(node_to_split.rchild)
 
-            # Compute word probability for all the leaf nodes
-            for leaf in self.current_leaf_nodes:
-                leaf.dist = self.__calculate_word_dist(leaf)
             logging.info("Total no of Nodes:"+ str(self.no_of_nodes))
 
             # save the generated model with the serialised trsl
@@ -156,27 +155,6 @@ class Trsl(object):
             config.set('Trsl', 'set_filename', '.'+self.set_filename)
             with open(file_path + 'model', 'w') as model:
                 config.write(model)
-
-    def __calculate_word_dist(self, leaf):
-        """
-            Computes the word probability for the leaf node passed
-            Argument:
-                leaf -> instance of Node
-        """
-
-        dist = defaultdict(lambda: 0)
-        for sentence_index, ngram_index in leaf.row_fragment_indices:
-             target_word = self.word_ngram_table[
-                 sentence_index, ngram_index, self.word_ngram_table.ngram_window_size-1
-             ]
-             dist[target_word] += 1.0
-
-        frequency_sum = sum(dist.values())
-
-        for key in dist.keys():
-            dist[key] /= frequency_sum
-
-        return dist
 
     def __split_node(self, node_to_split):
         """
@@ -192,6 +170,10 @@ class Trsl(object):
                 node_to_split.depth
             )
         )
+
+        #No further computations need to be done on this data
+        if node_to_split is not self.root:
+            node_to_split.parent.data_fragment = None
         #Best question has set index. Get the set back and assign it to the node
         node_to_split.set = self.word_sets[node_to_split.best_question.set]
         node_to_split.predictor_variable_index = (
@@ -202,7 +184,7 @@ class Trsl(object):
         node_to_split.lchild = Node(self.ngram_window_size)
         node_to_split.lchild.set_known_predvars[node_to_split.predictor_variable_index] = True
         node_to_split.lchild.parent = node_to_split
-        node_to_split.lchild.row_fragment_indices = node_to_split.best_question.b_indices
+        node_to_split.lchild.data_fragment = node_to_split.best_question.b_fragment
         node_to_split.lchild.probability = node_to_split.best_question.b_probability
         node_to_split.lchild.absolute_entropy = node_to_split.best_question.b_dist_entropy
         node_to_split.lchild.probabilistic_entropy = node_to_split.best_question.b_probability * node_to_split.best_question.b_dist_entropy
@@ -212,7 +194,7 @@ class Trsl(object):
         # NO path attributes for child node is set
         node_to_split.rchild = Node(self.ngram_window_size)
         node_to_split.rchild.parent = node_to_split
-        node_to_split.rchild.row_fragment_indices = node_to_split.best_question.nb_indices
+        node_to_split.rchild.data_fragment = node_to_split.best_question.nb_fragment
         node_to_split.rchild.probability = node_to_split.best_question.nb_probability
         node_to_split.rchild.absolute_entropy = node_to_split.best_question.nb_dist_entropy
         node_to_split.rchild.probabilistic_entropy = node_to_split.best_question.nb_probability * node_to_split.best_question.nb_dist_entropy
@@ -247,29 +229,21 @@ class Trsl(object):
             of the target variable values at the root node
             in the training text and also
             the entropy of this distribution.
-            Also, adds all the row indices in the ngram table
-            into row_fragment_indices since the data is not
-            fragmented yet.
+            Also, adds all ngram windows into data_fragment,
+            since all the data is present at the root of a decision tree
         """
 
-        self.root.dist = defaultdict(lambda: 0)
         self.root.probability = 1
-        for sentence_index, ngram_index in self.ngram_table.generate_all_ngram_indices():
-            self.root.dist[
-                self.ngram_table[sentence_index, ngram_index, self.ngram_window_size-1]
-            ] += 1.0
-
-            self.root.row_fragment_indices.append((sentence_index, ngram_index))
-
+        self.root.data_fragment = []
+        for x in self.ngram_table.generate_all_ngrams():
+            self.root.data_fragment.append(x)
+        self.root.data_fragment = np.array(self.root.data_fragment, dtype='int32')
         # Compute root node entropy, probability
-        for key in self.root.dist.keys():
-            frequency = self.root.dist[key]
-            probability = frequency/len(self.root.row_fragment_indices)
-            probability_of_info_gain = probability * math.log(probability, 2)
-            self.root.dist[key] = probability
-            self.root.absolute_entropy += -probability_of_info_gain
-
+        target_word_column = self.root.data_fragment[:,(self.ngram_window_size - 1)]
+        probabilities = np.bincount(target_word_column).astype('float32') / target_word_column.shape[0]
+        self.root.absolute_entropy = scipy.stats.entropy(probabilities, base=2)
         self.root.probabilistic_entropy = self.root.absolute_entropy * self.root.probability
+
         logging.debug(
             "Root Entropy: %s",
             self.root.probabilistic_entropy
@@ -292,25 +266,23 @@ class Trsl(object):
         """
 
 
-        # Bind ngramtable to a partial function
-
-        # Pick the node which gives you the lease avg_conditional_entropy in the child nodes
+        # Pick the node which gives you the least avg_conditional_entropy in the child nodes
         curr_node.best_question = min(
             (question for question in curr_node.generate_questions(
                 self.ngram_table,
                 self.__generate_pred_var_set_pairs
             )),
-            key=lambda question: question.avg_conditional_entropy if len(question.b_indices) > self.samples and len(question.nb_indices) > self.samples else float('inf')
+            key=lambda question: question.avg_conditional_entropy if len(question.b_fragment) > self.samples and len(question.nb_fragment) > self.samples else float('inf')
         )
 
-        if len(curr_node.best_question.b_indices) <= self.samples or len(curr_node.best_question.b_indices) <= self.samples:
+        if len(curr_node.best_question.b_fragment) <= self.samples or len(curr_node.best_question.b_fragment) <= self.samples:
             curr_node.reduction = 0
         else:
             logging.debug("Reduction: %s, (%s,%s)"
                 %(
                     curr_node.best_question.reduction,
-                    len(curr_node.best_question.b_indices),
-                    len(curr_node.best_question.nb_indices)
+                    len(curr_node.best_question.b_fragment),
+                    len(curr_node.best_question.nb_fragment)
                 )
             )
 
@@ -342,7 +314,7 @@ class Trsl(object):
             into a file for future use
         """
 
-        open(filename, "w").write(PickleTrsl().serialise(self))
+        #open(filename, "w").write(PickleTrsl().serialise(self))
 
     def __load(self, filename):
         """
@@ -424,4 +396,4 @@ class Trsl(object):
                 )
                 logging.debug("Probable Distribution: %s", temp.dist)
                 logging.info("Depth Reached: %s", steps)
-                return temp.dist
+                return self.word_sets[int(max(temp.dist.iteritems() , key=operator.itemgetter(1))[0])]

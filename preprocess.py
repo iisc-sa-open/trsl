@@ -5,10 +5,11 @@
 """
     Preprocesses the data for trsl construction
 """
-
+import sys
+reload(sys)
+sys.setdefaultencoding('utf-8')
 from nltk.tokenize import RegexpTokenizer, sent_tokenize
 from ngram_table import NGramTable
-import copy
 
 def preprocess(filename, ngram_window_size, sets):
     """
@@ -22,7 +23,7 @@ def preprocess(filename, ngram_window_size, sets):
             filename with corpus data, ngram window size, sets
     """
 
-    corpus = open(filename, "r").read().lower()
+    corpus = open(filename, "r").read().encode('ascii',errors='ignore').lower()
     # sentence tokenize the given corpus
     sentences = sent_tokenize(corpus)
     # word tokenize the given list of sentences
@@ -31,14 +32,10 @@ def preprocess(filename, ngram_window_size, sets):
         lambda x: len(x) >= ngram_window_size,
         map(tokenizer.tokenize, sentences)
     )
-    # instantiate NGramTable for the given corpus based on ngram window size
-    word_ngram_table = NGramTable(tokenized_corpus, ngram_window_size)
+
+    # An index of which word belongs to which word set
     set_reverse_index = {}
 
-    # Make a copy of the tokens, so we can just deal with set indices
-    # henceforth. The actual words are needed again to compute word
-    # probabilities at leaf nodes after the tree has stopped growing
-    tokenized_corpus = copy.deepcopy(tokenized_corpus)
     for i in xrange(len(sets)):
         for word in sets[i]:
             set_reverse_index[word] = i
@@ -52,4 +49,4 @@ def preprocess(filename, ngram_window_size, sets):
                 set_reverse_index[tokenized_corpus[i][j]] = len(sets) - 1
                 tokenized_corpus[i][j] = len(sets) - 1
     ngram_table = NGramTable(tokenized_corpus, ngram_window_size)
-    return (ngram_table, word_ngram_table, sets, set_reverse_index)
+    return (ngram_table, sets)

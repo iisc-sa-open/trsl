@@ -77,20 +77,12 @@ def args_parser():
 
     NEW_TIME = time.time()
     logging.info("Execution Time : "+str(NEW_TIME - OLD_TIME))
-    print("Tree Walk -> Enter a sentence: ")
-    print(
-        " ".join(trsl_instance.tree_walk(
-               raw_input().split(),10
-            )
-        )
-    )
+
     print("Predict -> Enter a sentence: ")
     print(
-        Counter(
             trsl_instance.predict(
                 raw_input().split()
             )
-        ).most_common(n=10)
     )
 
 def init_logger(args):

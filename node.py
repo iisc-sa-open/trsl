@@ -10,6 +10,8 @@
 
 from question import Question
 import math
+import scipy.stats
+import numpy as np
 
 class Node(object):
     """
@@ -26,7 +28,7 @@ class Node(object):
         self.set = None
         self.dist = None
         self.predictor_variable_index = None
-        self.row_fragment_indices = []
+        self.data_fragment = None
         self.probabilistic_entropy = 0
         self.absolute_entropy = 0
         self.parent = None
@@ -78,20 +80,31 @@ class Node(object):
 
             question.set = set_index
             question.predictor_variable_index = x_index
-            self.count_target_word_frequencies(ngram_table, x_index, set_index, question)
-            question.b_dist_entropy = self.frequencies_to_probabilities_and_entropy(question.b_dist)
-            question.nb_dist_entropy = self.frequencies_to_probabilities_and_entropy(question.nb_dist)
 
-            size_row_fragment = (
-                len(self.row_fragment_indices)
+            question.b_fragment = self.data_fragment[self.data_fragment[:,x_index] == set_index]
+            question.nb_fragment = self.data_fragment[self.data_fragment[:,x_index] != set_index]
+
+            target_column_index = self.data_fragment.shape[1] - 1
+            b_probabilities = np.bincount(question.b_fragment[:,target_column_index]).astype('float32') / question.b_fragment.shape[0]
+            nb_probabilities = np.bincount(question.nb_fragment[:,target_column_index]).astype('float32') / question.nb_fragment.shape[0]
+
+            question.b_dist = {index:b_probabilities[index] for index in range(len(b_probabilities))}
+            question.nb_dist = {index:nb_probabilities[index] for index in range(len(nb_probabilities))}
+
+
+            question.b_dist_entropy = scipy.stats.entropy(b_probabilities, base=2)
+            question.nb_dist_entropy = scipy.stats.entropy(nb_probabilities, base=2)
+
+            size_data = (
+                self.data_fragment.shape[0]
             )
             # Probability for next node in YES path computed
-            question.b_probability = 0 if size_row_fragment is 0 else (
-                self.probability * float(len(question.b_indices))/size_row_fragment
+            question.b_probability = 0 if size_data is 0 else (
+                self.probability * float(question.b_fragment.shape[0])/size_data
             )
             # Probability for next node in No path computed
-            question.nb_probability = 0 if size_row_fragment is 0 else (
-                self.probability * float(len(question.nb_indices))/size_row_fragment
+            question.nb_probability = 0 if size_data is 0 else (
+                self.probability * float(question.nb_fragment.shape[0])/size_data
             )
             # Avg conditional entropy computed for the node
             question.avg_conditional_entropy = (
@@ -105,60 +118,6 @@ class Node(object):
             )
 
             yield question
-
-
-    def count_target_word_frequencies(self, ngram_table, x_index, set_index, question):
-        """
-            Count target word frequencies for predictor
-            variable belongs to set and predictor variable
-            does not belong to set
-            Argument:
-                ngram_table -> Instance of NgramTable
-                x_index     -> Predictor Variable index
-                set_index   -> Set index
-                question    -> Question asked
-        """
-
-        for sentence_index, ngram_index in self.row_fragment_indices:
-            predictor_word = ngram_table[sentence_index, ngram_index, x_index]
-            target_word = ngram_table[
-                sentence_index, ngram_index, ngram_table.ngram_window_size-1
-            ]
-            # Target word belongs to the set
-            if predictor_word == set_index:
-                question.b_indices.append((sentence_index, ngram_index))
-                question.b_dist[target_word] += 1.0
-            # Target word does not belong to the set
-            else:
-                question.nb_indices.append((sentence_index, ngram_index))
-                question.nb_dist[target_word] += 1.0
-
-    def frequencies_to_probabilities_and_entropy(self, frequency_map):
-        """
-            Compute probability from frequency of occurence
-            and return the entropy of the same from the
-            frequency_map entries
-            Argument:
-                frequency_map -> {keys, values}
-                    keys    -> Set_id
-                    values  -> count of target variable
-            Return:
-                entropy
-        """
-
-        frequency_sum = sum(frequency_map.values())
-        entropy = 0
-        # Iterate over the frequency_map computing the entropy, probability
-        for key in frequency_map.keys():
-            frequency = frequency_map[key]
-            probability = frequency / frequency_sum
-            probability_of_info_gain = (
-                probability * math.log(probability, 2)
-            )
-            frequency_map[key] = probability
-            entropy += -probability_of_info_gain
-
-        return entropy
 
     def is_leaf(self):
         """
