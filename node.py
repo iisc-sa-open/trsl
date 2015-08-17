@@ -82,9 +82,9 @@ class Node(object):
 
             question.set = set_index
             question.predictor_variable_index = x_index
-
-            question.b_fragment = self.data_fragment[self.data_fragment[:,x_index] == set_index]
-            question.nb_fragment = self.data_fragment[self.data_fragment[:,x_index] != set_index]
+	    condition = self.data_fragment[:,x_index] == set_index
+            question.b_fragment = self.data_fragment.compress(condition, axis=0)
+            question.nb_fragment = self.data_fragment.compress(~condition, axis=0)
 
             target_column_index = self.data_fragment.shape[1] - 1
             b_probabilities = np.bincount(question.b_fragment[:,target_column_index]).astype('float32') / question.b_fragment.shape[0]
