@@ -185,6 +185,7 @@ class Trsl(object):
         node_to_split.lchild.set_known_predvars[node_to_split.predictor_variable_index] = True
         node_to_split.lchild.parent = node_to_split
         node_to_split.lchild.data_fragment = node_to_split.best_question.b_fragment
+        node_to_split.lchild.len_data_fragment = len(node_to_split.best_question.b_fragment)
         node_to_split.lchild.probability = node_to_split.best_question.b_probability
         node_to_split.lchild.absolute_entropy = node_to_split.best_question.b_dist_entropy
         node_to_split.lchild.probabilistic_entropy = node_to_split.best_question.b_probability * node_to_split.best_question.b_dist_entropy
@@ -195,6 +196,7 @@ class Trsl(object):
         node_to_split.rchild = Node(self.ngram_window_size)
         node_to_split.rchild.parent = node_to_split
         node_to_split.rchild.data_fragment = node_to_split.best_question.nb_fragment
+        node_to_split.rchild.len_data_fragment = len(node_to_split.best_question.nb_fragment)
         node_to_split.rchild.probability = node_to_split.best_question.nb_probability
         node_to_split.rchild.absolute_entropy = node_to_split.best_question.nb_dist_entropy
         node_to_split.rchild.probabilistic_entropy = node_to_split.best_question.nb_probability * node_to_split.best_question.nb_dist_entropy
@@ -243,7 +245,7 @@ class Trsl(object):
         probabilities = np.bincount(target_word_column).astype('float32') / target_word_column.shape[0]
         self.root.absolute_entropy = scipy.stats.entropy(probabilities, base=2)
         self.root.probabilistic_entropy = self.root.absolute_entropy * self.root.probability
-
+        self.root.len_data_fragment = len(self.root.data_fragment)
         logging.debug(
             "Root Entropy: %s",
             self.root.probabilistic_entropy
@@ -306,6 +308,9 @@ class Trsl(object):
 
         for i in xrange(len(data)):
             data[i] = set(data[i])
+        for x in data:
+            if type(x) is list:
+                print "Error",x
         return data
 
     def __serialize(self, filename):
@@ -314,7 +319,7 @@ class Trsl(object):
             into a file for future use
         """
 
-        #open(filename, "w").write(PickleTrsl().serialise(self))
+        open(filename, "w").write(PickleTrsl().serialise(self))
 
     def __load(self, filename):
         """
@@ -394,6 +399,5 @@ class Trsl(object):
                     self.root.probabilistic_entropy - temp.probabilistic_entropy,
                     100 * (self.root.probabilistic_entropy - temp.probabilistic_entropy)/self.root.probabilistic_entropy
                 )
-                logging.debug("Probable Distribution: %s", temp.dist)
                 logging.info("Depth Reached: %s", steps)
                 return self.word_sets[int(max(temp.dist.iteritems() , key=operator.itemgetter(1))[0])]
