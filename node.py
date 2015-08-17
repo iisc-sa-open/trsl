@@ -36,6 +36,7 @@ class Node(object):
         self.probability = 0
         self.best_question = None
         self.len_data_fragment = 0
+        self.word_probability = None
         self.set_known_predvars = [False for x in xrange(ngram_window_size - 1)]
 
     def question_already_asked(self, x_index, set_index):

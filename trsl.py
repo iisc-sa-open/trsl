@@ -36,7 +36,7 @@ class Trsl(object):
             self,
             ngram_window_size=6,
             reduction_threshold=100,
-            samples=10,
+            samples=0,
             config=None,
             model=None,
             corpus=None,
@@ -119,7 +119,7 @@ class Trsl(object):
             logging.info("No of Samples: %s", self.samples)
             # If corpus is supplied and model needs to be generated
             self.word_sets = self.__build_sets()
-            self.ngram_table, self.word_sets= preprocess.preprocess(
+            self.ngram_table, self.word_sets, self.word_ngram_table = preprocess.preprocess(
                 self.filename, self.ngram_window_size, self.word_sets
             )
             # Compute root node attributes
@@ -144,7 +144,10 @@ class Trsl(object):
 
             logging.info("Total no of Nodes:"+ str(self.no_of_nodes))
 
-            # save the generated model with the serialised trsl
+            # Compute word probability for all the leaf nodes
+            self.__compute_word_probability()
+
+            # Save the generated model with the serialised trsl
             file_path = "./"+self.filename.split("/")[-1]+"-model/"
             if not os.path.exists(file_path):
                 os.makedirs(file_path)
@@ -352,6 +355,31 @@ class Trsl(object):
 
         return seed
 
+
+    def __compute_word_probability(self):
+        """
+            Compute word probability for all the leaf nodes,
+            generate ngram sequences from the corpus, compute target
+            word frequency from which probability is computed for each
+            leaf node
+        """
+
+        for ngram_sequence in self.word_ngram_table.generate_all_ngrams():
+            target_word = ngram_sequence[-1]
+            node = self.__traverse_trsl(ngram_sequence[:-1])
+            if node.word_probability is None:
+                node.word_probability = defaultdict(lambda :0)
+            node.word_probability[target_word] += 1
+        for node in self.current_leaf_nodes:
+            if node.word_probability is None:
+                print(node)
+            else:
+                sum_frequences = sum(node.word_probability.values())
+                node.word_probability = {
+                    tup[0]:tup[1]/float(sum_frequences) for tup in node.word_probability.iteritems()
+                }
+
+
     def predict(self, predictor_variable_list):
         """
             Given a list of predictor words, this method
@@ -365,6 +393,19 @@ class Trsl(object):
             raise ValueError(
                 "predictor_variable_list size should conform with ngram window size"
             )
+        else:
+            temp = self.__traverse_trsl(predictor_variable_list)
+            return Counter(temp.word_probability).most_common(10)
+
+    def __traverse_trsl(self, predictor_variable_list):
+        """
+            Traverse the trsl based on the input
+            predictor_variable_list, return the leaf node
+            which is reached.
+            Return type
+                Node [leaf node]
+        """
+
         temp = self.root
         steps = 0
         while True:
@@ -373,31 +414,9 @@ class Trsl(object):
                 # Since the decision tree is  a full binary tree, both children exist
                 steps += 1
                 if predictor_variable_list[temp.predictor_variable_index] in temp.set:
-                    logging.debug(
-                        "LEVEL: %s, X%s = %s belongs to %s? YES",
-                        steps, temp.predictor_variable_index,
-                        predictor_variable_list[
-                            temp.predictor_variable_index
-                        ],
-                        temp.set
-                    )
                     temp = temp.lchild
                 # if node is leaf node
                 else:
-                    logging.debug(
-                        "LEVEL: %s, X%s = %s belongs to %s? NO",
-                        steps, temp.predictor_variable_index,
-                        predictor_variable_list[
-                            temp.predictor_variable_index
-                        ],
-                        temp.set
-                    )
                     temp = temp.rchild
             else:
-                logging.info(
-                    "Total Reduction in Entropy: %s -> %s%%",
-                    self.root.probabilistic_entropy - temp.probabilistic_entropy,
-                    100 * (self.root.probabilistic_entropy - temp.probabilistic_entropy)/self.root.probabilistic_entropy
-                )
-                logging.info("Depth Reached: %s", steps)
-                return self.word_sets[int(max(temp.dist.iteritems() , key=operator.itemgetter(1))[0])]
+                return temp

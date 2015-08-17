@@ -41,10 +41,6 @@ class PickleTrsl(object):
         for set_data in trsl_instance.word_sets:
             pickled_data['word_sets'].append(list(set_data))
         pickled_data['current_leaf_nodes'] = []
-
-        # Storing all trsl leaf nodes id as a list
-        for leaf in trsl_instance.current_leaf_nodes:
-            pickled_data['current_leaf_nodes'].append(str(id(leaf)))
         tree = pickled_data['tree']
 
         # Stack pushed with the root node initially for bfs traversal
@@ -83,6 +79,11 @@ class PickleTrsl(object):
                     else:
                         tree[str(id(node.rchild))]['rchild'] = None
                         tree[str(id(node.rchild))]['lchild'] = None
+
+        # Storing all trsl leaf nodes id as a list
+        for leaf in trsl_instance.current_leaf_nodes:
+            pickled_data['current_leaf_nodes'].append(str(id(leaf)))
+            pickled_data['tree'][str(id(leaf))]['word_probability'] = leaf.word_probability
 
         return json.dumps(pickled_data)
 
@@ -176,3 +177,4 @@ class PickleTrsl(object):
         trsl_instance.current_leaf_nodes = []
         for leaf in pickled_data['current_leaf_nodes']:
             trsl_instance.current_leaf_nodes.append(nodes[str(leaf)])
+            nodes[str(leaf)].word_probability = tree[str(leaf)]['word_probability']

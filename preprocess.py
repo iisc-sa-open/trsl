@@ -8,6 +8,7 @@
 import sys
 reload(sys)
 sys.setdefaultencoding('utf-8')
+import copy
 from nltk.tokenize import RegexpTokenizer, sent_tokenize
 from ngram_table import NGramTable
 
@@ -26,13 +27,15 @@ def preprocess(filename, ngram_window_size, sets):
     corpus = open(filename, "r").read().encode('ascii',errors='ignore').lower()
     # sentence tokenize the given corpus
     sentences = sent_tokenize(corpus)
+
     # word tokenize the given list of sentences
     tokenizer = RegexpTokenizer(r'(\w+(\'\w+)?)|\.')
     tokenized_corpus = filter(
         lambda x: len(x) >= ngram_window_size,
         map(tokenizer.tokenize, sentences)
     )
-
+    word_ngram_table = NGramTable(tokenized_corpus, ngram_window_size)
+    tokenized_corpus = copy.deepcopy(tokenized_corpus)
     # An index of which word belongs to which word set
     set_reverse_index = {}
 
@@ -49,4 +52,4 @@ def preprocess(filename, ngram_window_size, sets):
                 set_reverse_index[tokenized_corpus[i][j]] = len(sets) - 1
                 tokenized_corpus[i][j] = len(sets) - 1
     ngram_table = NGramTable(tokenized_corpus, ngram_window_size)
-    return (ngram_table, sets)
+    return (ngram_table, sets, word_ngram_table)
