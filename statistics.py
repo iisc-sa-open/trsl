@@ -4,13 +4,49 @@
 
 import logging
 import trsl
-import node
 import math
 import json
+import argparse
 from collections import Counter
 from matplotlib import pyplot as plt
 from nltk.tokenize import RegexpTokenizer
-import code
+
+def args_parser():
+
+    parser = argparse.ArgumentParser(
+        description='statistics.py executes for generating graphs over precomputed model'
+    )
+    parser.add_argument(
+        "-m",
+        "--model",
+        dest="model",
+        help="Pretrained model fed to the file",
+        action="store",
+        required=True
+    )
+    parser.add_argument(
+        "-n",
+        "--ngram",
+        dest="ngram",
+        help="Ngram Size",
+        action="store",
+        required=True
+    )
+    parser.add_argument(
+        "-c",
+        "--clusters",
+        dest="clusters",
+        help="Cluster size input",
+        action="store",
+        required=True
+    )
+    args = parser.parse_args()
+    if args.model and args.clusters and args.ngram:
+        trsl_instance = trsl.Trsl(model=args.model)
+        trsl_instance.train()
+        return trsl_instance, int(args.clusters), int(args.ngram)
+    else:
+        print "Required arguments not passed, model, cluster, ngram"
 
 logger = logging.getLogger()
 handler = logging.StreamHandler()
@@ -19,14 +55,13 @@ formatter = logging.Formatter(
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 logger.setLevel(logging.DEBUG)
+trsl_instance, clusters, ngram = args_parser()
 tree_data = []
-trsl_instance = trsl.Trsl()
-trsl_instance.train()
 logging.info("Loading Complete")
 leaf_nodes = []
 sets = []
-sets_count = [0 for x in range(0, 500)] # numsets
-xi = [0 for x in range(0, 10)]
+sets_count = [0 for x in range(0, clusters)] # numsets
+xi = [0 for x in range(0, ngram)]
 length_fragment_row_indices_list = []
 depth_list = []
 
@@ -89,7 +124,7 @@ def compute_avg_entropy():
     plt.figure()
     plt.xlabel("Predictor Variable index")
     plt.ylabel("No of Questions")
-    plt.bar(range(0, 10), xi)
+    plt.bar(range(0, len(xi)), xi)
     plt.savefig(
         "Xi vs no of questions.png"
     )
@@ -102,7 +137,7 @@ def bfs(node_list):
     sum_length_row_fragment_indices = 0
     probabilistic_average_entropy = sum(n.probabilistic_entropy for n in node_list)
     for node in node_list:
-        sum_length_row_fragment_indices += len(node.row_fragment_indices)
+        sum_length_row_fragment_indices += node.len_data_fragment
         if node.rchild is not None:
             xi[node.predictor_variable_index] += 1
             try:
@@ -127,5 +162,7 @@ def bfs(node_list):
     if len(children) is not 0:
         bfs(children)
 
-
-compute_avg_entropy()
+if trsl_instance is None:
+    logging.error("Error, trsl not trained from precomputed data")
+else:
+    compute_avg_entropy()

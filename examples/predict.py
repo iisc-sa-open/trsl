@@ -27,7 +27,7 @@ sys.path.insert(0, PARENT_DIR)
 
 import trsl
 
-def init_logger():
+def init_logger_parser():
     """
         Initializes the format and level of the logging
     """
@@ -46,6 +46,13 @@ def init_logger():
         help="Silence all logging",
         action="store_true"
     )
+    parser.add_argument(
+        "-m",
+        "--model",
+        help="Model file path",
+        action="store",
+        required=True
+    )
     args = parser.parse_args()
     if args.silent:
         return
@@ -59,22 +66,26 @@ def init_logger():
         logger.setLevel(logging.DEBUG)
     else:
         logger.setLevel(logging.INFO)
+    return args.model
 
 if __name__ == "__main__":
 
-    init_logger()
+    model = init_logger_parser()
     time.time()
     OLD_TIME = time.time()
-    trsl_instance = trsl.Trsl()
-    trsl_instance.train()
-    NEW_TIME = time.time()
-    trsl.logging.info("Execution Time : "+str(NEW_TIME - OLD_TIME))
+    if model is not None:
+        trsl_instance = trsl.Trsl(model=model)
+        trsl_instance.train()
+        NEW_TIME = time.time()
+        trsl.logging.info("Execution Time : "+str(NEW_TIME - OLD_TIME))
 
-    while True:
-        print "\nEnter predictor words to predict the next:"
-        print "Ten most likely words:"+str(
-            Counter(
-                trsl_instance.predict(
-                    raw_input().lower().split()
-                )
-            ).most_common(10))
+        while True:
+            print "\nEnter predictor words to predict the next:"
+            print "Ten most likely words:"+str(
+                Counter(
+                    trsl_instance.predict(
+                        raw_input().lower().split()
+                    )
+                ).most_common(10))
+    else:
+        logging.error("Pre trained model path needs to be passed")
