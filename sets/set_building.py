@@ -3,27 +3,34 @@
 # Copyright of the Indian Institute of Science's Speech and Audio group.
 
 """
-    Used to build sets
+    Used to build sets from the vectors provided by KMeans clustering
 """
 
 import sys
 import json
-import time
 from sklearn.cluster import KMeans
 
-if __name__ == "__main__":
+def build_sets(num_words=None, num_clusters=None, vectors=None):
+    """
+        Used to build sets with vectors generated,
+        Kmeans utilised to make the clusters of desired size
+    """
 
-    num_words = int(sys.argv[1])
-    num_clusters = int(sys.argv[2])
-    set_filename = open(sys.argv[3], "r").read().split("\n")
+    if num_words is None or num_clusters is None or vectors is None:
+        return None
     word_list = []
     vector_list = []
     for index in xrange(0, num_words):
-        set_data = json.loads(set_filename[index])
+        set_data = json.loads(vectors[index])
         word_list.append(set_data[0])
         vector_list.append(set_data[1])
 
-    kmeans_clust = KMeans(n_clusters=num_clusters, precompute_distances=True, n_jobs=-2, max_iter=1000, n_init=20)
+    kmeans_clust = KMeans(
+        n_clusters=num_clusters,
+        precompute_distances=True,
+        n_jobs=-2, max_iter=1000,
+        n_init=20
+    )
     idx = kmeans_clust.fit_predict(vector_list)
 
     k = [[] for x in xrange(num_clusters)]
@@ -34,3 +41,11 @@ if __name__ == "__main__":
     open(
         filename, "w"
     ).write(json.dumps(k))
+
+
+if __name__ == "__main__":
+
+    NUM_WORDS = int(sys.argv[1])
+    NUM_CLUSTERS = int(sys.argv[2])
+    VECTORS_LIST = open(sys.argv[3], "r").read().split("\n")
+    build_sets(num_words=NUM_WORDS, num_clusters=NUM_CLUSTERS, vectors=VECTORS_LIST)

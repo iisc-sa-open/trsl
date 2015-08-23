@@ -93,7 +93,9 @@ class PickleTrsl(object):
             json string.
         """
 
-        tree[str(id(node))]['dist'] = None if node.dist is None else {int(tup[0]):float(tup[1]) for tup in node.dist.iteritems()}
+        tree[str(id(node))]['dist'] = None if node.dist is None else {
+            int(tup[0]):float(tup[1]) for tup in node.dist.iteritems()
+        }
         tree[str(id(node))]['absolute_entropy'] = node.absolute_entropy
         tree[str(id(node))]['probabilistic_entropy'] = node.probabilistic_entropy
         tree[str(id(node))]['depth'] = node.depth
@@ -111,7 +113,9 @@ class PickleTrsl(object):
             Create a node and store the stored json data into the specified node
         """
 
-        temp.dist = None if tree[key]['dist'] is None else {int(tup[0]):float(tup[1]) for tup in tree[key]['dist'].iteritems()}
+        temp.dist = None if tree[key]['dist'] is None else {
+            int(tup[0]):float(tup[1]) for tup in tree[key]['dist'].iteritems()
+        }
         temp.absolute_entropy = float(tree[key]['absolute_entropy'])
         temp.probabilistic_entropy = float(tree[key]['probabilistic_entropy'])
         temp.depth = int(tree[key]['depth'])

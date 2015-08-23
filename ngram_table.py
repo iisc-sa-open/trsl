@@ -31,12 +31,16 @@ class NGramTable(object):
             Generator for producing ngram window for each individual sentences
             in the corpus.
             Return type:
-                An array of ngram_window_size items 
+                An array of ngram_window_size items
         """
 
         for sentence_index in xrange(len(self.sentences)):
-            for ngram_index in xrange(len(self.sentences[sentence_index]) - (self.ngram_window_size - 1)):
-                yield self.sentences[sentence_index][ngram_index:ngram_index + self.ngram_window_size]
+            for ngram_index in xrange(
+                    len(self.sentences[sentence_index]) - (self.ngram_window_size - 1)
+                ):
+                yield self.sentences[sentence_index][
+                    ngram_index:ngram_index + self.ngram_window_size
+                ]
 
     def __getitem__(self, tup):
         """
@@ -50,7 +54,7 @@ class NGramTable(object):
         sentence_index, ngram_index, word_index = tup
 
         if sentence_index < len(self.sentences):
-            if ngram_index < ( len(self.sentences[sentence_index]) - (self.ngram_window_size - 1) ):
+            if ngram_index < (len(self.sentences[sentence_index]) - (self.ngram_window_size - 1)):
                 if word_index < self.ngram_window_size:
                     return self.sentences[sentence_index][ngram_index + word_index]
                 else:

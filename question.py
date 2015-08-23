@@ -8,7 +8,6 @@
     the question asked in each node
 """
 
-from collections import defaultdict
 
 class Question(object):
     """

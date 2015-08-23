@@ -142,7 +142,7 @@ class Trsl(object):
                     # Preprocess of corpus for sets successfull
                     logging.info("Corpus preprocessed for set building")
                     status = os.system(
-                        "python2 ./sets/word-vectorizer.py "
+                        "python2 ./sets/word_vectorizer.py "
                         + self.filename + "-sorted "
                         + self.filename + "-vectors "
                         + self.word2vec_model_path

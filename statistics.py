@@ -2,6 +2,10 @@
 # -*- coding: utf-8 -*-
 # Copyright of the Indian Institute of Science's Speech and Audio group.
 
+"""
+    Used for producing graphs for trsl
+"""
+
 import logging
 import trsl
 import math
@@ -11,7 +15,11 @@ from collections import Counter
 from matplotlib import pyplot as plt
 from nltk.tokenize import RegexpTokenizer
 
+
 def args_parser():
+    """
+        Used for command line argument parsing
+    """
 
     parser = argparse.ArgumentParser(
         description='statistics.py executes for generating graphs over precomputed model'
@@ -48,31 +56,35 @@ def args_parser():
     else:
         print "Required arguments not passed, model, cluster, ngram"
 
-logger = logging.getLogger()
-handler = logging.StreamHandler()
-formatter = logging.Formatter(
-    '%(asctime)s %(levelname)-8s %(message)s')
-handler.setFormatter(formatter)
-logger.addHandler(handler)
-logger.setLevel(logging.DEBUG)
-trsl_instance, clusters, ngram = args_parser()
-tree_data = []
-logging.info("Loading Complete")
-leaf_nodes = []
-sets = []
-sets_count = [0 for x in range(0, clusters)] # numsets
-xi = [0 for x in range(0, ngram)]
-length_fragment_row_indices_list = []
-depth_list = []
+def init_logging():
+    """
+        Initialise logging for statistics.py
+    """
 
-def compute_avg_entropy():
+    logger = logging.getLogger()
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter(
+        '%(asctime)s %(levelname)-8s %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.setLevel(logging.DEBUG)
 
-    global trsl_instance, tree_data, length_fragment_row_indices_list, depth_list, sets_count, sets, xi
+def plot_graphs():
+    """
+        Plotting all graphs
+    """
+
+    global trsl_instance, tree_data, length_fragment_row_indices_list
+    global depth_list, sets_count, sets, xi
 
     bfs([trsl_instance.root])
     plt.xlabel("Level Avg Entropy vs Level.png")
     plt.ylabel("Avg Entropy")
-    plt.plot(xrange(0, len(tree_data)), map(lambda x: x['avg_entropy'], tree_data), label="Probabilistic Avg Entropy")
+    plt.plot(
+        xrange(0, len(tree_data)),
+        map(lambda x: x['avg_entropy'], tree_data),
+        label="Probabilistic Avg Entropy"
+    )
     plt.legend()
     plt.savefig(
         "Avg Entropy vs Level.png"
@@ -80,7 +92,10 @@ def compute_avg_entropy():
     plt.figure()
     plt.xlabel("Level")
     plt.ylabel("log2(No of Nodes)")
-    plt.plot(xrange(0, len(tree_data)), map(lambda x: math.log(x['no_of_nodes'], 2), tree_data))
+    plt.plot(
+        xrange(0, len(tree_data)),
+        map(lambda x: math.log(x['no_of_nodes'], 2), tree_data)
+    )
     plt.savefig(
         "No of Nodes vs Level.png"
     )
@@ -100,7 +115,9 @@ def compute_avg_entropy():
     plt.savefig(
         "Set index vs no of questions.png"
     )
-    open(trsl_instance.filename+".set_index", "w").write(json.dumps(zip(map(list, sets), sets_count)))
+    open(
+        trsl_instance.filename+".set_index", "w"
+    ).write(json.dumps(zip(map(list, sets), sets_count)))
 
     plt.figure()
     tokenizer = RegexpTokenizer(r'(\w+(\'\w+)?)|\.')
@@ -130,8 +147,11 @@ def compute_avg_entropy():
     )
 
 def bfs(node_list):
+    """
+        BFS traversal through all the nodes
+    """
 
-    global depth_list, length_row_fragment_indices
+    global depth_list, length_row_fragment_indices, trsl_instance
     children = []
     probabilistic_average_entropy = 0
     sum_length_row_fragment_indices = 0
@@ -162,7 +182,21 @@ def bfs(node_list):
     if len(children) is not 0:
         bfs(children)
 
-if trsl_instance is None:
-    logging.error("Error, trsl not trained from precomputed data")
-else:
-    compute_avg_entropy()
+
+if __name__ == "__main__":
+
+    init_logging()
+    trsl_instance, clusters, ngram = args_parser()
+    tree_data = []
+    logging.info("Loading Complete")
+    leaf_nodes = []
+    sets = []
+    sets_count = [0 for x in range(0, clusters)] # numsets
+    xi = [0 for x in range(0, ngram)]
+    length_fragment_row_indices_list = []
+    depth_list = []
+
+    if trsl_instance is None:
+        logging.error("Error, trsl not trained from precomputed data")
+    else:
+        plot_graphs()

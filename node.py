@@ -9,7 +9,6 @@
 """
 
 from question import Question
-import math
 import scipy.stats
 import numpy as np
 
@@ -82,16 +81,24 @@ class Node(object):
 
             question.set = set_index
             question.predictor_variable_index = x_index
-            condition = self.data_fragment[:,x_index] == set_index
+            condition = self.data_fragment[:, x_index] == set_index
             question.b_fragment = self.data_fragment.compress(condition, axis=0)
             question.nb_fragment = self.data_fragment.compress(~condition, axis=0)
 
             target_column_index = self.data_fragment.shape[1] - 1
-            b_probabilities = np.bincount(question.b_fragment[:,target_column_index]).astype('float32') / question.b_fragment.shape[0]
-            nb_probabilities = np.bincount(question.nb_fragment[:,target_column_index]).astype('float32') / question.nb_fragment.shape[0]
+            b_probabilities = np.bincount(
+                question.b_fragment[:, target_column_index]
+            ).astype('float32') / question.b_fragment.shape[0]
+            nb_probabilities = np.bincount(
+                question.nb_fragment[:, target_column_index]
+            ).astype('float32') / question.nb_fragment.shape[0]
 
-            question.b_dist = {index:b_probabilities[index] for index in range(len(b_probabilities))}
-            question.nb_dist = {index:nb_probabilities[index] for index in range(len(nb_probabilities))}
+            question.b_dist = {
+                index:b_probabilities[index] for index in range(len(b_probabilities))
+            }
+            question.nb_dist = {
+                index:nb_probabilities[index] for index in range(len(nb_probabilities))
+            }
 
 
             question.b_dist_entropy = scipy.stats.entropy(b_probabilities, base=2)

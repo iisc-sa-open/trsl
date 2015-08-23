@@ -24,7 +24,7 @@ def preprocess(filename, ngram_window_size, sets):
             filename with corpus data, ngram window size, sets
     """
 
-    corpus = open(filename, "r").read().encode('ascii',errors='ignore').lower()
+    corpus = open(filename, "r").read().encode('ascii', errors='ignore').lower()
     # sentence tokenize the given corpus
     sentences = sent_tokenize(corpus)
 
