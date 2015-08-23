@@ -53,7 +53,7 @@ class Trsl(object):
                 logging.error("Error Model file corrupted")
                 return None
         else:
-            # If mode is not provided for initialisation
+            # If model is not provided for initialisation
             if corpus is None:
                 logging.error("""
                     Error, No pretrained model passed or corpus for
@@ -366,7 +366,7 @@ class Trsl(object):
 
         if ((len(curr_node.best_question.b_fragment) <= self.samples) or
                 (len(curr_node.best_question.b_fragment) <= self.samples)):
-            curr_node.reduction = 0
+            curr_node.best_question.reduction = 0
         else:
             logging.debug(
                 "Reduction: %s, (%s,%s)"

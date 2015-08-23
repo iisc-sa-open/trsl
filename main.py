@@ -57,46 +57,46 @@ def args_parser():
 
     trsl_instance = None
     parser = argparse.ArgumentParser(
-        description='Main.py executes and trains the trsl'
+        description='Script used to generate models'
     )
     parser.add_argument(
         "-v",
         "--verbose",
-        help="Increase output verbosity",
+        help="increase output verbosity",
         action="store_true"
     )
     parser.add_argument(
         "-s",
         "--silent",
-        help="Silence all logging",
+        help="silence all logging",
         action="store_true"
     )
     parser.add_argument(
         "-m",
         "--model",
         dest="model",
-        help="Pretrained model fed to the file",
+        help="pre-computed model file path",
         action="store"
     )
     parser.add_argument(
         "-c",
         "--config",
         dest="config",
-        help="Config file for the model supplied here",
+        help="config file for the model generation",
         action="store"
     )
     parser.add_argument(
         "-t",
         "--text",
         dest="corpus",
-        help="Text corpus supplied for making the model",
+        help="text corpus for model generation",
         action="store"
     )
     parser.add_argument(
         "-g",
         "--group",
         dest="group",
-        help="Groups of words [sets]",
+        help="groups of words, preclustered words based on vectors [ sets ]",
         action="store"
     )
     args = parser.parse_args()

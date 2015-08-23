@@ -31,24 +31,26 @@ def init_logger_parser():
         Initializes the format and level of the logging
     """
     parser = argparse.ArgumentParser(
-        description='Test script for trsl.py'
+        description="""Example script for random tree walk
+            based on the input predictor variables of ngram window size
+            and the no of words to be generated"""
     )
     parser.add_argument(
         "-v",
         "--verbose",
-        help="Increase output verbosity",
+        help="increase output verbosity",
         action="store_true"
     )
     parser.add_argument(
         "-s",
         "--silent",
-        help="Silence all logging",
+        help="silence all logging",
         action="store_true"
     )
     parser.add_argument(
         "-m",
         "--model",
-        help="Model file path",
+        help="pre-computed model file path",
         action="store",
         required=True
     )
