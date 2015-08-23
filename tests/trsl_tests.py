@@ -22,7 +22,7 @@ PARENT_DIR = os.path.dirname(CURRENT_DIR)
 sys.path.insert(0, PARENT_DIR)
 
 import trsl
-from trsl import Trsl
+
 
 class TrslTestCase(unittest.TestCase):
     """Tests for `trsl.py`."""
@@ -30,7 +30,8 @@ class TrslTestCase(unittest.TestCase):
     def setUp(self):
         """Create instance of trsl and train the instance for each test"""
 
-        self.trsl_instance = trsl.Trsl()
+        global MODEL
+        self.trsl_instance = trsl.Trsl(model=MODEL)
         self.trsl_instance.train()
 
     @staticmethod
@@ -38,8 +39,11 @@ class TrslTestCase(unittest.TestCase):
 
         children = []
         for node in node_list:
+            # if it is an internal node
             if node.rchild is not None:
+                # Validates conditions specified by individual tests on the current node
                 validate_condition(node)
+                # push the children of the current node into the stack
                 children.append(node.rchild)
                 children.append(node.lchild)
 
@@ -71,7 +75,43 @@ class TrslTestCase(unittest.TestCase):
             )
         )
 
+    def test_sample_size(self):
+        """Validate if data fragment size for every node is greater than sample size"""
+
+        TrslTestCase.bfs(
+            [self.trsl_instance.root],
+            lambda node: self.assertGreater(
+                node.len_data_fragment,
+                self.trsl_instance.samples,
+                msg="Sample size should be greater than data fragment length for every node"
+            )
+        )
+
+    def test_leaf_word_probability(self):
+        """Validate if every leaf node has a word probability"""
+
+        for leaf_node in self.trsl_instance.current_leaf_nodes:
+            self.assertIsNotNone(
+                leaf_node.word_probability,
+                msg="Leaf node does not have word probability"
+            )
+
 
 if __name__ == "__main__":
 
-    unittest.main()
+    parser = argparse.ArgumentParser(
+        description='Test script for trsl.py'
+    )
+    parser.add_argument(
+        "-m",
+        "--model",
+        help="Model file path",
+        action="store",
+        required=True
+    )
+    args = parser.parse_args()
+    if args.model:
+        MODEL = args.model
+        runner = unittest.TextTestRunner()
+        itersuite = unittest.TestLoader().loadTestsFromTestCase(TrslTestCase)
+        runner.run(itersuite)
