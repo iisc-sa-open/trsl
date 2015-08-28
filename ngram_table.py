@@ -1,14 +1,16 @@
-#! /usr/bin/env/python2
+#!/usr/bin/python2.7
 # -*- coding: utf-8 -*-
 # Copyright of the Indian Institute of Science's Speech and Audio group.
 
 """
-    NGramTable Abstraction implemented which produces a moving ngram_window_size
+    NGramTable Abstraction implemented which
+    produces a moving ngram_window_size
     over individual sentences in the corpus
 """
 
 
 class NGramTable(object):
+
     """
         Creates an abstraction over an array of sentences to access them
         as if it were a stream of ngrams in table with rows and columns.
@@ -35,9 +37,12 @@ class NGramTable(object):
         """
 
         for sentence_index in xrange(len(self.sentences)):
-            for ngram_index in xrange(
-                    len(self.sentences[sentence_index]) - (self.ngram_window_size - 1)
-                ):
+            no_of_ngrams = (
+                len(
+                    self.sentences[sentence_index]
+                )-(self.ngram_window_size - 1)
+            )
+            for ngram_index in xrange(no_of_ngrams):
                 yield self.sentences[sentence_index][
                     ngram_index:ngram_index + self.ngram_window_size
                 ]
@@ -52,14 +57,4 @@ class NGramTable(object):
         """
 
         sentence_index, ngram_index, word_index = tup
-
-        if sentence_index < len(self.sentences):
-            if ngram_index < (len(self.sentences[sentence_index]) - (self.ngram_window_size - 1)):
-                if word_index < self.ngram_window_size:
-                    return self.sentences[sentence_index][ngram_index + word_index]
-                else:
-                    raise KeyError('Word index out of range')
-            else:
-                raise KeyError('Ngram index out of range')
-        else:
-            raise KeyError('Sentence index out of range')
+        return self.sentences[sentence_index][ngram_index + word_index]

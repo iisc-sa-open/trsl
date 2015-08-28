@@ -1,4 +1,4 @@
-#! /usr/bin/env/python2
+#!/usr/bin/python2.7
 # -*- coding: utf-8 -*-
 # Copyright of the Indian Institute of Science's Speech and Audio group.
 
@@ -10,6 +10,7 @@
 import sys
 import gensim
 import json
+
 
 def generate_vectors(model=None, word_list=None, vector_file=None):
     """
@@ -35,5 +36,3 @@ if __name__ == "__main__":
     WORD_LIST = open(sys.argv[1], "r").read().split()
     MODEL = sys.argv[3]
     generate_vectors(vector_file=VECTOR_FILE, model=MODEL, word_list=WORD_LIST)
-
-

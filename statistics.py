@@ -1,4 +1,4 @@
-#! /usr/bin/env/python2
+#!/usr/bin/python2.7
 # -*- coding: utf-8 -*-
 # Copyright of the Indian Institute of Science's Speech and Audio group.
 
@@ -22,7 +22,7 @@ def args_parser():
     """
 
     parser = argparse.ArgumentParser(
-        description='statistics.py executes for generating graphs over precomputed model'
+        description='script used for generating graphs over precomputed model'
     )
     parser.add_argument(
         "-m",
@@ -54,7 +54,8 @@ def args_parser():
         trsl_instance.train()
         return trsl_instance, int(args.clusters), int(args.ngram)
     else:
-        print "Required arguments not passed, model, cluster, ngram"
+        print 'Required arguments not passed, model, cluster, ngram'
+
 
 def init_logging():
     """
@@ -68,6 +69,7 @@ def init_logging():
     handler.setFormatter(formatter)
     logger.addHandler(handler)
     logger.setLevel(logging.DEBUG)
+
 
 def plot_graphs():
     """
@@ -121,7 +123,14 @@ def plot_graphs():
 
     plt.figure()
     tokenizer = RegexpTokenizer(r'(\w+(\'\w+)?)|\.')
-    common_words = Counter(tokenizer.tokenize(open(trsl_instance.filename, "r").read().lower()))
+    common_words = Counter(
+        tokenizer.tokenize(
+            open(
+                trsl_instance.filename,
+                "r"
+            ).read().lower()
+        )
+    )
     sets_avg_freq = []
 
     for s in sets:
@@ -137,7 +146,6 @@ def plot_graphs():
         "Median Freq of set vs no of questions.png"
     )
 
-
     plt.figure()
     plt.xlabel("Predictor Variable index")
     plt.ylabel("No of Questions")
@@ -145,6 +153,7 @@ def plot_graphs():
     plt.savefig(
         "Xi vs no of questions.png"
     )
+
 
 def bfs(node_list):
     """
@@ -155,7 +164,9 @@ def bfs(node_list):
     children = []
     probabilistic_average_entropy = 0
     sum_length_row_fragment_indices = 0
-    probabilistic_average_entropy = sum(n.probabilistic_entropy for n in node_list)
+    probabilistic_average_entropy = sum(
+        n.probabilistic_entropy for n in node_list
+    )
     for node in node_list:
         sum_length_row_fragment_indices += node.len_data_fragment
         if node.rchild is not None:
@@ -170,7 +181,9 @@ def bfs(node_list):
             leaf_nodes.append(node)
         if node.lchild is not None:
             children.append(node.lchild)
-    length_fragment_row_indices_list.append(sum_length_row_fragment_indices / len(node_list))
+    length_fragment_row_indices_list.append(
+        sum_length_row_fragment_indices / len(node_list)
+    )
     depth_list.append(node_list[0].depth)
 
     tree_data.append(
@@ -191,7 +204,7 @@ if __name__ == "__main__":
     logging.info("Loading Complete")
     leaf_nodes = []
     sets = []
-    sets_count = [0 for x in range(0, clusters)] # numsets
+    sets_count = [0 for x in range(0, clusters)]
     xi = [0 for x in range(0, ngram)]
     length_fragment_row_indices_list = []
     depth_list = []

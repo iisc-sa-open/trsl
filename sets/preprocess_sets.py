@@ -1,4 +1,4 @@
-#! /usr/bin/env/python2
+#!/usr/bin/python2.7
 # -*- coding: utf-8 -*-
 # Copyright of the Indian Institute of Science's Speech and Audio group.
 
@@ -7,11 +7,12 @@
     and write them to a file
 """
 
+from collections import Counter
+from nltk.tokenize import RegexpTokenizer
 import sys
 reload(sys)
 sys.setdefaultencoding('utf-8')
-from collections import Counter
-from nltk.tokenize import RegexpTokenizer
+
 
 def preprocess_corpus():
     """
@@ -22,7 +23,10 @@ def preprocess_corpus():
     if len(sys.argv) > 1:
         for index in range(1, len(sys.argv)):
             filename = sys.argv[index]
-            corpus = open(filename).read().encode('ascii', errors='ignore').lower()
+            corpus = open(filename).read().encode(
+                'ascii',
+                errors='ignore'
+            ).lower()
             tokenizer = RegexpTokenizer(r'\w+(\'\w+)?')
             tokenized_corpus = tokenizer.tokenize(corpus.lower())
             output_file = open(filename+"-sorted", "w")

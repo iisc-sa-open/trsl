@@ -27,7 +27,8 @@ sys.path.insert(0, PARENT_DIR)
 
 import trsl
 
-def init_logger_parser():
+
+def init_parser():
     """
         Initializes the format and level of the logging
     """
@@ -55,38 +56,38 @@ def init_logger_parser():
         required=True
     )
     args = parser.parse_args()
-    if args.silent:
-        return
-    logger = logging.getLogger()
-    handler = logging.StreamHandler()
-    formatter = logging.Formatter(
-        '%(asctime)s %(levelname)-8s %(message)s')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    if args.verbose:
-        logger.setLevel(logging.DEBUG)
-    else:
-        logger.setLevel(logging.INFO)
-    return args.model
-
-if __name__ == "__main__":
-
-    model = init_logger_parser()
-    time.time()
-    OLD_TIME = time.time()
+    model = args.model
+    logger = init_logger(args)
     if model is not None:
+        OLD_TIME = time.time()
         trsl_instance = trsl.Trsl(model=model)
-        trsl_instance.train()
         NEW_TIME = time.time()
-        trsl.logging.info("Execution Time : "+str(NEW_TIME - OLD_TIME))
-
+        logger.info("Execution Time : " + str(NEW_TIME - OLD_TIME))
         while True:
             print "\nEnter predictor words to predict the next:"
-            print "Ten most likely words:"+str(
+            print "Ten most likely words:" + str(
                 Counter(
                     trsl_instance.predict(
                         raw_input().lower().split()
                     )
                 ).most_common(10))
     else:
-        logging.error("Pre trained model path needs to be passed")
+        logger.error("Pre trained model path needs to be passed")
+
+def init_logger(args):
+    """
+        Initialise the logger based on given conditions
+    """
+
+    logger = logging.getLogger('Trsl')
+    if args.silent:
+        logger.setLevel(logging.ERROR)
+    elif args.verbose:
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
+    return logger
+
+if __name__ == "__main__":
+
+    init_parser()

@@ -1,4 +1,4 @@
-#! /usr/bin/env/python2
+#!/usr/bin/python2.7
 # -*- coding: utf-8 -*-
 # Copyright of the Indian Institute of Science's Speech and Audio group.
 
@@ -14,22 +14,26 @@ import logging
 from collections import Counter
 from trsl import Trsl
 
-def trsl_operations(trsl_instance):
+
+def trsl_operations(trsl_instance, logger):
     """
         From pretrained trsl perform predict, tree walk operations
         as a menu driven program
     """
 
     if trsl_instance is None:
-        logging.error("Training imcomplete")
+        logger.error("Training imcomplete")
         return
 
     while True:
-        print "Enter your Choice:\n1> Predict next Word\n2> Random Tree Walk\n3> Exit"
+        print """Enter your Choice:
+            1> Predict next Word
+            2> Random Tree Walk
+            3> Exit"""
         choice = int(raw_input())
         if choice == 1:
             print "Enter predictor words to predict the next:"
-            print "Ten most likely words:"+str(
+            print "Ten most likely words:" + str(
                 Counter(
                     trsl_instance.predict(
                         raw_input().lower().split()
@@ -48,7 +52,8 @@ def trsl_operations(trsl_instance):
         elif choice == 3:
             return
         else:
-            logging.error("Error, invalid input")
+            logger.error("Error, invalid input")
+
 
 def args_parser():
     """
@@ -100,29 +105,27 @@ def args_parser():
         action="store"
     )
     args = parser.parse_args()
-    init_logger(args)
+    logger = init_logger(args)
     time.time()
     old_time = time.time()
     if args.model:
         trsl_instance = Trsl(model=args.model)
-        trsl_instance.train()
     elif args.group and args.corpus and args.config:
-        trsl_instance = Trsl(set_filename=args.group, corpus=args.corpus, config=args.config)
-        trsl_instance.train()
+        trsl_instance = Trsl(
+            set_filename=args.group, corpus=args.corpus, config=args.config
+        )
     elif args.group and args.corpus:
         trsl_instance = Trsl(set_filename=args.group, corpus=args.corpus)
-        trsl_instance.train()
     elif args.corpus and args.config:
         trsl_instance = Trsl(corpus=args.corpus, config=args.config)
-        trsl_instance.train()
     else:
         print "Required arguments not passed, run --help for more details"
         return
 
     new_time = time.time()
     loading_time = new_time - old_time
-    logging.info("Execution Time : "+str(loading_time))
-    trsl_operations(trsl_instance)
+    logger.info("Execution Time : " + str(loading_time))
+    trsl_operations(trsl_instance, logger)
 
 
 def init_logger(args):
@@ -130,18 +133,14 @@ def init_logger(args):
         Initialise the logger based on user preference
     """
 
+    logger = logging.getLogger('Trsl')
     if args.silent:
-        return
-    logger = logging.getLogger()
-    handler = logging.StreamHandler()
-    formatter = logging.Formatter(
-        '%(asctime)s %(levelname)-8s %(message)s')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    if args.verbose:
+        logger.setLevel(logging.ERROR)
+    elif args.verbose:
         logger.setLevel(logging.DEBUG)
     else:
         logger.setLevel(logging.INFO)
+    return logger
 
 if __name__ == "__main__":
 

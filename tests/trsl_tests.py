@@ -3,14 +3,17 @@
     Validates the trsl instance after training it.
     Constraints verified:
     * There is always reduction in a node from the parent
-    * Correct probability distribution from the parent node between the children
+    * Correct probability distribution from the parent node
+        between the children
+    * Validate len_data_fragment of every node is less than
+        input sample size threshold
+    * Validate every leaf node contains a word probability
 """
 
 import sys
 import os
 import inspect
 import argparse
-import time
 import unittest
 
 CURRENT_DIR = os.path.dirname(
@@ -22,6 +25,7 @@ PARENT_DIR = os.path.dirname(CURRENT_DIR)
 sys.path.insert(0, PARENT_DIR)
 
 import trsl
+import logging
 
 
 class TrslTestCase(unittest.TestCase):
@@ -31,8 +35,9 @@ class TrslTestCase(unittest.TestCase):
         """Create instance of trsl and train the instance for each test"""
 
         global MODEL
+        logger = logging.getLogger('Trsl')
+        logger.setLevel(logging.ERROR)
         self.trsl_instance = trsl.Trsl(model=MODEL)
-        self.trsl_instance.train()
 
     @staticmethod
     def bfs(node_list, validate_condition):
@@ -41,7 +46,8 @@ class TrslTestCase(unittest.TestCase):
         for node in node_list:
             # if it is an internal node
             if node.rchild is not None:
-                # Validates conditions specified by individual tests on the current node
+                # Validates conditions specified by individual tests,
+                # on the current node
                 validate_condition(node)
                 # push the children of the current node into the stack
                 children.append(node.rchild)
@@ -51,7 +57,9 @@ class TrslTestCase(unittest.TestCase):
             TrslTestCase.bfs(children, validate_condition)
 
     def test_reduction(self):
-        """Validate significant reduction of each node from parent node"""
+        """
+            Validate significant reduction of each node from parent node
+        """
 
         TrslTestCase.bfs(
             [self.trsl_instance.root],
@@ -63,7 +71,10 @@ class TrslTestCase(unittest.TestCase):
         )
 
     def test_probability_division(self):
-        """Validate correct probability distribution from parent between the children"""
+        """
+            Validate correct probability distribution
+            from parent between the children
+        """
 
         TrslTestCase.bfs(
             [self.trsl_instance.root],
@@ -76,14 +87,20 @@ class TrslTestCase(unittest.TestCase):
         )
 
     def test_sample_size(self):
-        """Validate if data fragment size for every node is greater than sample size"""
+        """
+            Validate if data fragment size,
+            for every node is greater than sample size
+        """
 
         TrslTestCase.bfs(
             [self.trsl_instance.root],
             lambda node: self.assertGreater(
                 node.len_data_fragment,
-                self.trsl_instance.samples,
-                msg="Sample size should be greater than data fragment length for every node"
+                self.trsl_instance.sample_size,
+                msg="""
+                    Sample size should be greater than
+                    data fragment length for every node
+                """
             )
         )
 

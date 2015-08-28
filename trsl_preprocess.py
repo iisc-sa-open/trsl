@@ -1,16 +1,18 @@
-#! /usr/bin/env/python2
+#!/usr/bin/python2.7
 # -*- coding: utf-8 -*-
 # Copyright of the Indian Institute of Science's Speech and Audio group.
 
 """
     Preprocesses the data for trsl construction
 """
-import sys
-reload(sys)
-sys.setdefaultencoding('utf-8')
+
 import copy
 from nltk.tokenize import RegexpTokenizer, sent_tokenize
 from ngram_table import NGramTable
+import sys
+reload(sys)
+sys.setdefaultencoding('utf-8')
+
 
 def preprocess(filename, ngram_window_size, sets):
     """
@@ -24,16 +26,18 @@ def preprocess(filename, ngram_window_size, sets):
             filename with corpus data, ngram window size, sets
     """
 
-    corpus = open(filename, "r").read().encode('ascii', errors='ignore').lower()
+    corpus = open(filename, "r").read().encode(
+        'ascii', errors='ignore').lower()
     # sentence tokenize the given corpus
     sentences = sent_tokenize(corpus)
 
     # word tokenize the given list of sentences
     tokenizer = RegexpTokenizer(r'(\w+(\'\w+)?)|\.')
-    tokenized_corpus = filter(
-        lambda x: len(x) >= ngram_window_size,
-        map(tokenizer.tokenize, sentences)
-    )
+    tokenized_corpus = [
+        x for x in map(tokenizer.tokenize, sentences) if (
+            len(x) >= ngram_window_size
+        )
+    ]
     word_ngram_table = NGramTable(tokenized_corpus, ngram_window_size)
     tokenized_corpus = copy.deepcopy(tokenized_corpus)
     # An index of which word belongs to which word set
@@ -42,14 +46,16 @@ def preprocess(filename, ngram_window_size, sets):
     for i in xrange(len(sets)):
         for word in sets[i]:
             set_reverse_index[word] = i
-    sets.append([])
+    sets.append(set())
     for i in xrange(len(tokenized_corpus)):
         for j in xrange(len(tokenized_corpus[i])):
             try:
-                tokenized_corpus[i][j] = set_reverse_index[tokenized_corpus[i][j]]
+                tokenized_corpus[i][j] = set_reverse_index[
+                    tokenized_corpus[i][j]]
             except KeyError:
-                sets[-1].append(tokenized_corpus[i][j])
+                sets[-1].add(tokenized_corpus[i][j])
                 set_reverse_index[tokenized_corpus[i][j]] = len(sets) - 1
                 tokenized_corpus[i][j] = len(sets) - 1
+
     ngram_table = NGramTable(tokenized_corpus, ngram_window_size)
     return (ngram_table, sets, word_ngram_table)

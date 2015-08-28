@@ -1,4 +1,4 @@
-#! /usr/bin/env/python2
+#!/usr/bin/python2.7
 # -*- coding: utf-8 -*-
 # Copyright of the Indian Institute of Science's Speech and Audio group.
 
@@ -11,14 +11,16 @@ import json
 from node import Node
 from question import Question
 
+
 class PickleTrsl(object):
+
     """
-        serialise   -> serialises the trsl_instance into json notation following
-                       an iterative approach for traversal and serialization
+        serialise   -> serialises the trsl_instance into json notation.
+                       an iterative approach utilised for traversal
+                       and serialization
         deserialise -> deserialise the json string produced from serialise
                        and store all the nodes into the passed trsl instance
     """
-
 
     def serialise(self, trsl_instance):
         """
@@ -33,7 +35,7 @@ class PickleTrsl(object):
         pickled_data['no_of_nodes'] = trsl_instance.no_of_nodes
         pickled_data['reduction_threshold'] = trsl_instance.reduction_threshold
         pickled_data['ngram_window_size'] = trsl_instance.ngram_window_size
-        pickled_data['samples'] = trsl_instance.samples
+        pickled_data['sample_size'] = trsl_instance.sample_size
         pickled_data['tree'] = {}
         pickled_data['word_sets'] = []
 
@@ -53,14 +55,15 @@ class PickleTrsl(object):
         tree[str(id(trsl_instance.root))]['rchild'] = None
         tree[str(id(trsl_instance.root))]['parent'] = None
 
-        # BFS traversal for flattening and storing all the attributes of all nodes
+        # BFS traversal for flattening and storing all the attributes of all
+        # nodes
         while len(stack) is not 0:
             node = stack.pop()
             if node is not None:
                 # current node is internal node
                 if not node.is_leaf():
                     tree[str(id(node))]['lchild'] = str(id(node.lchild))
-                    tree[str(id(node.lchild))] = {'parent':str(id(node))}
+                    tree[str(id(node.lchild))] = {'parent': str(id(node))}
                     self.__save_data(tree, node.lchild)
                     if not node.lchild.is_leaf():
                         # children nodes are internal nodes
@@ -71,7 +74,7 @@ class PickleTrsl(object):
                         tree[str(id(node.lchild))]['rchild'] = None
 
                     tree[str(id(node))]['rchild'] = str(id(node.rchild))
-                    tree[str(id(node.rchild))] = {'parent':str(id(node))}
+                    tree[str(id(node.rchild))] = {'parent': str(id(node))}
                     self.__save_data(tree, node.rchild)
                     # if children are internal nodes push into stack
                     if not node.rchild.is_leaf():
@@ -83,7 +86,8 @@ class PickleTrsl(object):
         # Storing all trsl leaf nodes id as a list
         for leaf in trsl_instance.current_leaf_nodes:
             pickled_data['current_leaf_nodes'].append(str(id(leaf)))
-            pickled_data['tree'][str(id(leaf))]['word_probability'] = leaf.word_probability
+            pickled_data['tree'][
+                str(id(leaf))]['word_probability'] = leaf.word_probability
 
         return json.dumps(pickled_data)
 
@@ -94,34 +98,41 @@ class PickleTrsl(object):
         """
 
         tree[str(id(node))]['dist'] = None if node.dist is None else {
-            int(tup[0]):float(tup[1]) for tup in node.dist.iteritems()
+            int(tup[0]): float(tup[1]) for tup in list(node.dist.items())
         }
         tree[str(id(node))]['absolute_entropy'] = node.absolute_entropy
-        tree[str(id(node))]['probabilistic_entropy'] = node.probabilistic_entropy
+        tree[str(id(node))][
+            'probabilistic_entropy'] = node.probabilistic_entropy
         tree[str(id(node))]['depth'] = node.depth
         tree[str(id(node))]['probability'] = node.probability
         tree[str(id(node))]['parent'] = str(id(node.parent))
-        tree[str(id(node))]['avg_conditional_entropy'] = node.best_question.avg_conditional_entropy
+        tree[str(id(node))]['avg_conditional_entropy'] = (
+            node.best_question.avg_conditional_entropy
+        )
         tree[str(id(node))]['reduction'] = node.best_question.reduction
-        tree[str(id(node))]['set'] = None if node.set is None else list(node.set)
-        tree[str(id(node))]['predictor_variable_index'] = node.predictor_variable_index
+        tree[str(id(node))][
+            'set'] = None if node.set is None else list(node.set)
+        tree[str(id(node))][
+            'predictor_variable_index'] = node.predictor_variable_index
         tree[str(id(node))]['len_data_fragment'] = node.len_data_fragment
-
 
     def __set_data(self, tree, temp, key):
         """
-            Create a node and store the stored json data into the specified node
+            Create a node and store the stored json data into given node
         """
 
         temp.dist = None if tree[key]['dist'] is None else {
-            int(tup[0]):float(tup[1]) for tup in tree[key]['dist'].iteritems()
+            int(tup[0]): float(tup[1]) for tup in list(
+                tree[key]['dist'].items()
+            )
         }
         temp.absolute_entropy = float(tree[key]['absolute_entropy'])
         temp.probabilistic_entropy = float(tree[key]['probabilistic_entropy'])
         temp.depth = int(tree[key]['depth'])
         temp.probability = float(tree[key]['probability'])
         temp.best_question = Question()
-        temp.best_question.avg_conditional_entropy = float(tree[key]['avg_conditional_entropy'])
+        temp.best_question.avg_conditional_entropy = float(
+            tree[key]['avg_conditional_entropy'])
         temp.best_question.reduction = float(tree[key]['reduction'])
         temp.predictor_variable_index = tree[key]['predictor_variable_index']
         temp.set = None if tree[key]['set'] is None else set(tree[key]['set'])
@@ -138,9 +149,11 @@ class PickleTrsl(object):
         trsl_instance.filename = pickled_data['filename']
         trsl_instance.set_filename = pickled_data['set_filename']
         trsl_instance.no_of_nodes = int(pickled_data['no_of_nodes'])
-        trsl_instance.reduction_threshold = int(pickled_data['reduction_threshold'])
-        trsl_instance.ngram_window_size = int(pickled_data['ngram_window_size'])
-        trsl_instance.samples = int(pickled_data['samples'])
+        trsl_instance.reduction_threshold = int(
+            pickled_data['reduction_threshold'])
+        trsl_instance.ngram_window_size = int(
+            pickled_data['ngram_window_size'])
+        trsl_instance.sample_size = int(pickled_data['sample_size'])
         trsl_instance.word_sets = []
 
         # Retrieval of word_sets for the trsl from the json_data
@@ -153,7 +166,7 @@ class PickleTrsl(object):
         stack = [pickled_data['root']]
 
         # nodes stores all the nodes with their corresponding id's
-        nodes = {pickled_data['root']:trsl_instance.root}
+        nodes = {pickled_data['root']: trsl_instance.root}
         while len(stack) is not 0:
 
             key = stack.pop()
@@ -161,12 +174,16 @@ class PickleTrsl(object):
 
             # Save the attributes from tree to the node
             self.__set_data(tree, temp, key)
-            temp.parent = None if tree[key]['parent'] is None else nodes[tree[key]['parent']]
+            temp.parent = None if tree[key][
+                'parent'] is None else nodes[tree[key]['parent']]
 
             # if current node is internal node
-            if  tree[key]['lchild'] is not None or tree[key]['rchild'] is not None:
-                nodes[str(tree[key]['lchild'])] = Node(trsl_instance.ngram_window_size)
-                nodes[str(tree[key]['rchild'])] = Node(trsl_instance.ngram_window_size)
+            if tree[key]['lchild'] is not None:
+
+                nodes[str(tree[key]['lchild'])] = Node(
+                    trsl_instance.ngram_window_size)
+                nodes[str(tree[key]['rchild'])] = Node(
+                    trsl_instance.ngram_window_size)
                 temp.lchild = nodes[tree[key]['lchild']]
                 temp.rchild = nodes[tree[key]['rchild']]
                 stack.append(tree[key]['lchild'])
@@ -181,4 +198,5 @@ class PickleTrsl(object):
         trsl_instance.current_leaf_nodes = []
         for leaf in pickled_data['current_leaf_nodes']:
             trsl_instance.current_leaf_nodes.append(nodes[str(leaf)])
-            nodes[str(leaf)].word_probability = tree[str(leaf)]['word_probability']
+            nodes[str(leaf)].word_probability = tree[
+                str(leaf)]['word_probability']

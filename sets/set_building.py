@@ -1,4 +1,4 @@
-#! /usr/bin/env/python2
+#!/usr/bin/python2.7
 # -*- coding: utf-8 -*-
 # Copyright of the Indian Institute of Science's Speech and Audio group.
 
@@ -9,6 +9,7 @@
 import sys
 import json
 from sklearn.cluster import KMeans
+
 
 def build_sets(num_words=None, num_clusters=None, vectors=None):
     """
@@ -48,4 +49,6 @@ if __name__ == "__main__":
     NUM_WORDS = int(sys.argv[1])
     NUM_CLUSTERS = int(sys.argv[2])
     VECTORS_LIST = open(sys.argv[3], "r").read().split("\n")
-    build_sets(num_words=NUM_WORDS, num_clusters=NUM_CLUSTERS, vectors=VECTORS_LIST)
+    build_sets(
+        num_words=NUM_WORDS, num_clusters=NUM_CLUSTERS, vectors=VECTORS_LIST
+    )

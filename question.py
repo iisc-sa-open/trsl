@@ -1,4 +1,4 @@
-#! /usr/bin/env/python2
+#!/usr/bin/python2.7
 # -*- coding: utf-8 -*-
 # Copyright of the Indian Institute of Science's Speech and Audio group.
 
@@ -10,6 +10,7 @@
 
 
 class Question(object):
+
     """
         Stores all the data that results from asking a question
         at a particular node
@@ -34,4 +35,4 @@ class Question(object):
         self.b_probability = 0
         self.nb_probability = 0
         self.avg_conditional_entropy = float("inf")
-        # min of avg_conditional_entropy needs to be picked, thus default is set to infinity
+        # min of avg_conditional_entropy picked thus set inf as default
