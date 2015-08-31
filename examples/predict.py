@@ -16,9 +16,6 @@ import os
 import sys
 import time
 
-import trsl
-
-
 CURRENT_DIR = os.path.dirname(
     os.path.abspath(
         inspect.getfile(inspect.currentframe())
@@ -27,6 +24,7 @@ CURRENT_DIR = os.path.dirname(
 PARENT_DIR = os.path.dirname(CURRENT_DIR)
 sys.path.insert(0, PARENT_DIR)
 
+import trsl
 
 def init_parser():
     """
