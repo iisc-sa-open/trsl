@@ -9,17 +9,19 @@
 """
 
 
+import ConfigParser
 from collections import Counter, defaultdict
-from node import Node
 import json
 import logging
-import trsl_preprocess   # todo check for namespace pollution
-import random
 import os
-from pickling import PickleTrsl
-import ConfigParser
+import random
+
 import scipy.stats
+
+from node import Node
 import numpy as np
+from pickling import PickleTrsl
+import trsl_preprocess   # todo check for namespace pollution
 
 
 class Trsl(object):
@@ -42,7 +44,7 @@ class Trsl(object):
             corpus=None,
             config=None,
             set_filename=None
-            ):
+    ):
 
         self.__init_logger()
         serialised_trsl = None
@@ -158,38 +160,34 @@ class Trsl(object):
         """
 
         if self.__is_set_building_required():
+            selfvalues = dict(fname=self.filename, w2v_path=self.word2vec_model_path,
+                              wordsets=self.no_of_words_set, clusters=self.no_of_clusters)
 
             self.logger.info(
                 "Preprocessing corpus for set building"
             )
             self.__execute_scripts(
-                "python2 ./sets/preprocess_sets.py " + self.filename,
-                "Preprocessing sets failed"
-            )
+                "python2 ./sets/preprocess_sets.py %(fname)s" % selfvalues,
+                "Preprocessing sets failed")
 
             self.logger.info(
                 "Generating word vectors from preprocessed data"
             )
             self.__execute_scripts(
-                "python2 ./sets/word_vectorizer.py "
-                + self.filename + "-sorted "
-                + self.filename + "-vectors "
-                + self.word2vec_model_path,
+                "python2 ./sets/word_vectorizer.py %(fname)s -sorted %(fname)s -vectors %(w2v_path)s" % selfvalues,
                 "Word vectors computing failed"
             )
 
-            file_path = "./"+self.filename.split("/")[-1]+"-model/"
+            file_path = "./" + self.filename.split("/")[-1] + "-model/"
             # If folder does not exist, create the same
             if not os.path.exists(file_path):
                 os.makedirs(file_path)
             self.set_filename = file_path + "sets"
+            selfvalues['set_fname'] = self.set_filename
 
             self.logger.info("Performing Set Clustering")
             self.__execute_scripts(
-                "python2 ./sets/set_building.py "
-                + str(self.no_of_words_set) + " "
-                + str(self.no_of_clusters) + " "
-                + self.filename+"-vectors " + self.set_filename,
+                "python2 ./sets/set_building.py %(wordsets)s %(clusters)s %(fname)s -vectors %(set_fname)s" % selfvalues,
                 "Set building operation failed"
             )
 
@@ -295,7 +293,7 @@ class Trsl(object):
             self.__compute_word_probability()
 
             # Save the generated model with the serialised trsl
-            file_path = "./"+self.filename.split("/")[-1]+"-model/"
+            file_path = "./" + self.filename.split("/")[-1] + "-model/"
             if not os.path.exists(file_path):
                 os.makedirs(file_path)
             self.__serialize(file_path + "serialised_trsl.json")
@@ -452,7 +450,7 @@ class Trsl(object):
             Lazy generator for Predictor, Set combinations
         """
 
-        for x_index in xrange(0, self.ngram_window_size-1):
+        for x_index in xrange(0, self.ngram_window_size - 1):
             for set_index in xrange(len(self.word_sets)):
                 yield (x_index, set_index)
 
@@ -472,7 +470,7 @@ class Trsl(object):
             key=lambda question: question.avg_conditional_entropy if (
                 len(question.b_fragment) > self.sample_size) and (
                     len(question.nb_fragment) > self.sample_size
-                ) else float('inf')
+            ) else float('inf')
         )
 
         if ((len(curr_node.best_question.b_fragment) <= self.sample_size) or
@@ -533,8 +531,8 @@ class Trsl(object):
             upto no_of_words prediction
         """
 
-        for index in xrange(no_of_words):
-            dist = self.predict(seed[-(self.ngram_window_size-1)::])
+        for _ in xrange(no_of_words):
+            dist = self.predict(seed[-(self.ngram_window_size - 1)::])
             rand = random.random()
             s = 0
             for i in dist.keys():
@@ -563,7 +561,7 @@ class Trsl(object):
             if node.word_probability is not None:
                 sum_frequences = sum(node.word_probability.values())
                 node.word_probability = {
-                    tup[0]: tup[1]/float(
+                    tup[0]: tup[1] / float(
                         sum_frequences
                     ) for tup in node.word_probability.items()
                 }
@@ -577,7 +575,7 @@ class Trsl(object):
             todo: exception handling when predict is called before train
         """
 
-        if len(predictor_variable_list) != self.ngram_window_size-1:
+        if len(predictor_variable_list) != self.ngram_window_size - 1:
             self.logger.error("""
                 predictor_variable_list size should conform
                 with ngram window size

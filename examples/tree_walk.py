@@ -8,13 +8,14 @@
 """
 
 
-from collections import Counter
 import argparse
 import inspect
+import logging
 import os
 import sys
 import time
-import logging
+
+import trsl
 
 
 CURRENT_DIR = os.path.dirname(
@@ -24,8 +25,6 @@ CURRENT_DIR = os.path.dirname(
 )
 PARENT_DIR = os.path.dirname(CURRENT_DIR)
 sys.path.insert(0, PARENT_DIR)
-
-import trsl
 
 
 def init_parser():
@@ -75,6 +74,7 @@ def init_parser():
             )
     else:
         logger.error("Pre trained model path needs to be passed")
+
 
 def init_logger(args):
     """

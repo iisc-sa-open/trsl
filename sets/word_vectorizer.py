@@ -7,9 +7,10 @@
     using a pretrained word2vec model
 """
 
-import sys
-import gensim
 import json
+import sys
+
+import gensim
 
 
 def generate_vectors(model=None, word_list=None, vector_file=None):

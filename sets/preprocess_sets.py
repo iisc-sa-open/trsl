@@ -8,8 +8,9 @@
 """
 
 from collections import Counter
-from nltk.tokenize import RegexpTokenizer
 import sys
+
+from nltk.tokenize import RegexpTokenizer
 reload(sys)
 sys.setdefaultencoding('utf-8')
 
@@ -29,11 +30,11 @@ def preprocess_corpus():
             ).lower()
             tokenizer = RegexpTokenizer(r'\w+(\'\w+)?')
             tokenized_corpus = tokenizer.tokenize(corpus.lower())
-            output_file = open(filename+"-sorted", "w")
+            output_file = open(filename + "-sorted", "w")
             freq_count = Counter(tokenized_corpus)
             for data in freq_count.most_common():
-                word, count = data
-                output_file.write(word+"\n")
+                word, _ = data  # word, count
+                output_file.write(word + "\n")
             output_file.close()
     else:
         print "No Arguments Passed"

@@ -7,9 +7,11 @@
 """
 
 import copy
-from nltk.tokenize import RegexpTokenizer, sent_tokenize
-from ngram_table import NGramTable
 import sys
+
+from nltk.tokenize import RegexpTokenizer, sent_tokenize
+
+from ngram_table import NGramTable
 reload(sys)
 sys.setdefaultencoding('utf-8')
 

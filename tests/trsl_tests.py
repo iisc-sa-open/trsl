@@ -10,11 +10,15 @@
     * Validate every leaf node contains a word probability
 """
 
-import sys
-import os
-import inspect
 import argparse
+import inspect
+import logging
+import os
+import sys
 import unittest
+
+import trsl
+
 
 CURRENT_DIR = os.path.dirname(
     os.path.abspath(
@@ -23,9 +27,6 @@ CURRENT_DIR = os.path.dirname(
 )
 PARENT_DIR = os.path.dirname(CURRENT_DIR)
 sys.path.insert(0, PARENT_DIR)
-
-import trsl
-import logging
 
 
 class TrslTestCase(unittest.TestCase):

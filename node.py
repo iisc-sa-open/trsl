@@ -8,9 +8,10 @@
     with the entire decision tree.
 """
 
-from question import Question
 import scipy.stats
+
 import numpy as np
+from question import Question
 
 
 class Node(object):
@@ -39,7 +40,7 @@ class Node(object):
         self.len_data_fragment = 0
         self.word_probability = None
         self.set_known_predvars = (
-            [False for x in xrange(ngram_window_size - 1)]
+            [False for _ in xrange(ngram_window_size - 1)]
         )
 
     def question_already_asked(self, x_index, set_index):
@@ -138,8 +139,7 @@ class Node(object):
             )
             # Avg conditional entropy computed for the node
             question.avg_conditional_entropy = (
-                (question.b_probability * question.b_dist_entropy)
-                +
+                (question.b_probability * question.b_dist_entropy) +
                 (question.nb_probability * question.nb_dist_entropy)
             )
             # Reduction computed for current node

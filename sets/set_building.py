@@ -6,8 +6,9 @@
     Used to build sets from the vectors provided by KMeans clustering
 """
 
-import sys
 import json
+import sys
+
 from sklearn.cluster import KMeans
 
 
@@ -34,7 +35,7 @@ def build_sets(num_words=None, num_clusters=None, vectors=None):
     )
     idx = kmeans_clust.fit_predict(vector_list)
 
-    k = [[] for x in xrange(num_clusters)]
+    k = [[] for _ in xrange(num_clusters)]
     word_centroid_map = dict(zip(word_list, idx))
     for word in word_centroid_map.keys():
         k[word_centroid_map[word]].append(word)

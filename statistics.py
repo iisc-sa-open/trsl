@@ -6,14 +6,16 @@
     Used for producing graphs for trsl
 """
 
-import logging
-import trsl
-import math
-import json
 import argparse
 from collections import Counter
+import json
+import logging
+import math
+
 from matplotlib import pyplot as plt
 from nltk.tokenize import RegexpTokenizer
+
+import trsl
 
 
 def args_parser():
@@ -118,7 +120,7 @@ def plot_graphs():
         "Set index vs no of questions.png"
     )
     open(
-        trsl_instance.filename+".set_index", "w"
+        trsl_instance.filename + ".set_index", "w"
     ).write(json.dumps(zip(map(list, sets), sets_count)))
 
     plt.figure()
@@ -138,7 +140,7 @@ def plot_graphs():
         for word in s:
             temp_list.append(common_words[word])
         temp_list.sort()
-        sets_avg_freq.append(temp_list[len(temp_list)/2])
+        sets_avg_freq.append(temp_list[len(temp_list) / 2])
     plt.xlabel("Median frequency of words in set")
     plt.ylabel("No of Questions")
     plt.bar(sets_avg_freq, sets_count[:len(sets)])
@@ -162,7 +164,6 @@ def bfs(node_list):
 
     global depth_list, length_row_fragment_indices, trsl_instance
     children = []
-    probabilistic_average_entropy = 0
     sum_length_row_fragment_indices = 0
     probabilistic_average_entropy = sum(
         n.probabilistic_entropy for n in node_list

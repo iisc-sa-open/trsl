@@ -40,7 +40,7 @@ class NGramTable(object):
             no_of_ngrams = (
                 len(
                     self.sentences[sentence_index]
-                )-(self.ngram_window_size - 1)
+                ) - (self.ngram_window_size - 1)
             )
             for ngram_index in xrange(no_of_ngrams):
                 yield self.sentences[sentence_index][
