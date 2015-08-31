@@ -163,31 +163,41 @@ class Trsl(object):
             selfvalues = dict(fname=self.filename, w2v_path=self.word2vec_model_path,
                               wordsets=self.no_of_words_set, clusters=self.no_of_clusters)
 
+            scripts_folder = os.path.join(os.curdir, 'sets')
+            preproc = os.path.join(scripts_folder, "preprocess_sets.py")
+            word2vec = os.path.join(scripts_folder, "word_vectorizer.py")
+            setbuild = os.path.join(scripts_folder, "set_building.py")
+
+            selfvalues['preproc'] = preproc
+            selfvalues['word2vec'] = word2vec
+            selfvalues['setbuild'] = setbuild
+
             self.logger.info(
                 "Preprocessing corpus for set building"
             )
             self.__execute_scripts(
-                "python2 ./sets/preprocess_sets.py %(fname)s" % selfvalues,
+                "python2 %(preproc)s %(fname)s" % selfvalues,
                 "Preprocessing sets failed")
 
             self.logger.info(
                 "Generating word vectors from preprocessed data"
             )
             self.__execute_scripts(
-                "python2 ./sets/word_vectorizer.py %(fname)s -sorted %(fname)s -vectors %(w2v_path)s" % selfvalues,
+                "python2 %(word2vec)s %(fname)s -sorted %(fname)s -vectors %(w2v_path)s" % selfvalues,
                 "Word vectors computing failed"
             )
 
-            file_path = "./" + self.filename.split("/")[-1] + "-model/"
+            # file_path = "./" + self.filename.split("/")[-1] + "-model/"
+            file_path = os.path.join(os.curdir, self.filename.split(os.sep)[-1] + '-model')
             # If folder does not exist, create the same
             if not os.path.exists(file_path):
                 os.makedirs(file_path)
-            self.set_filename = file_path + "sets"
+            self.set_filename = os.path.join(file_path, 'sets')
             selfvalues['set_fname'] = self.set_filename
 
             self.logger.info("Performing Set Clustering")
             self.__execute_scripts(
-                "python2 ./sets/set_building.py %(wordsets)s %(clusters)s %(fname)s -vectors %(set_fname)s" % selfvalues,
+                "python2 %(setbuild)s %(wordsets)s %(clusters)s %(fname)s -vectors %(set_fname)s" % selfvalues,
                 "Set building operation failed"
             )
 
