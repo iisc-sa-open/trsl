@@ -1,0 +1,4 @@
+[Trsl]
+serialised_trsl = ../data/models/last_question-model/serialised_trsl.json
+set_filename = ../data/models/last_question-model/sets
+
