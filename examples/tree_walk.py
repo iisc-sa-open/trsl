@@ -15,15 +15,7 @@ import os
 import sys
 import time
 
-CURRENT_DIR = os.path.dirname(
-    os.path.abspath(
-        inspect.getfile(inspect.currentframe())
-    )
-)
-PARENT_DIR = os.path.dirname(CURRENT_DIR)
-sys.path.insert(0, PARENT_DIR)
-
-import trsl
+from ..trsl.trsl import Trsl
 
 def init_parser():
     """
@@ -57,7 +49,7 @@ def init_parser():
     logger = init_logger(args)
     if model is not None:
         OLD_TIME = time.time()
-        trsl_instance = trsl.Trsl(model=model)
+        trsl_instance = Trsl(model=model)
         NEW_TIME = time.time()
         logger.info("Execution Time : " + str(NEW_TIME - OLD_TIME))
         while True:

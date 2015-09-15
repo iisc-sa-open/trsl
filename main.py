@@ -12,7 +12,7 @@ import argparse
 import time
 import logging
 from collections import Counter
-from trsl import Trsl
+from trsl.trsl import Trsl
 
 
 def trsl_operations(trsl_instance, logger):

@@ -1,4 +1,4 @@
 [Trsl]
-serialised_trsl = ../data/models/Gutengerg-austen-emma.txt-model/serialised_trsl.json
-set_filename = ../data/models/Gutengerg-austen-emma.txt-model/sets
+serialised_trsl = ./trsl/data/models/Gutengerg-austen-emma.txt-model/serialised_trsl.json
+set_filename = ./trsl/data/models/Gutengerg-austen-emma.txt-model/sets
 

@@ -17,15 +17,7 @@ import os
 import sys
 import unittest
 
-CURRENT_DIR = os.path.dirname(
-    os.path.abspath(
-        inspect.getfile(inspect.currentframe())
-    )
-)
-PARENT_DIR = os.path.dirname(CURRENT_DIR)
-sys.path.insert(0, PARENT_DIR)
-
-import trsl
+from ..trsl.trsl import Trsl
 
 
 class TrslTestCase(unittest.TestCase):
@@ -37,7 +29,7 @@ class TrslTestCase(unittest.TestCase):
         global MODEL
         logger = logging.getLogger('Trsl')
         logger.setLevel(logging.ERROR)
-        self.trsl_instance = trsl.Trsl(model=MODEL)
+        self.trsl_instance = Trsl(model=MODEL)
 
     @staticmethod
     def bfs(node_list, validate_condition):

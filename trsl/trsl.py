@@ -122,7 +122,7 @@ class Trsl(object):
         self.serialised_trsl = serialised_trsl
         self.word_ngram_table = None
         if output_dir is None and model is None:
-            self.output_dir = "../data/models/" + self.filename.split("/")[-1]+"-model/"
+            self.output_dir = "./trsl/data/models/" + self.filename.split("/")[-1]+"-model/"
         else:
             self.output_dir = output_dir
         self.__train()
@@ -165,7 +165,7 @@ class Trsl(object):
             selfvalues = dict(fname=self.filename, w2v_path=self.word2vec_model_path,
                               wordsets=self.no_of_words_set, clusters=self.no_of_clusters)
 
-            scripts_folder = os.path.join(os.curdir, 'sets')
+            scripts_folder = os.path.join(os.curdir,'trsl/trsl/sets/')
             preproc = os.path.join(scripts_folder, "preprocess_sets.py")
             word2vec = os.path.join(scripts_folder, "word_vectorizer.py")
             setbuild = os.path.join(scripts_folder, "set_building.py")
@@ -184,10 +184,10 @@ class Trsl(object):
             self.logger.info(
                 "Generating word vectors from preprocessed data"
             )
-            # self.__execute_scripts(
-            #     "python2 %(word2vec)s %(fname)s-sorted %(fname)s-vectors %(w2v_path)s" % selfvalues,
-            #     "Word vectors computing failed"
-            # )
+            self.__execute_scripts(
+                "python2 %(word2vec)s %(fname)s-sorted %(fname)s-vectors %(w2v_path)s" % selfvalues,
+                "Word vectors computing failed"
+            )
 
             file_path = self.output_dir
             # If folder does not exist, create the same

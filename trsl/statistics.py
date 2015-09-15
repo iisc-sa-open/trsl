@@ -10,7 +10,7 @@ import argparse
 import json
 import logging
 import math
-import trsl
+from trsl import Trsl
 from collections import Counter
 from matplotlib import pyplot as plt
 from nltk.tokenize import RegexpTokenizer
@@ -50,7 +50,7 @@ def args_parser():
     )
     args = parser.parse_args()
     if args.model and args.clusters and args.ngram:
-        trsl_instance = trsl.Trsl(model=args.model)
+        trsl_instance = Trsl(model=args.model)
         return trsl_instance, int(args.clusters), int(args.ngram)
     else:
         print 'Required arguments not passed, model, cluster, ngram'
