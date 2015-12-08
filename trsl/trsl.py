@@ -42,21 +42,13 @@ class Trsl(object):
             corpus=None,
             config=None,
             set_filename=None,
-            output_dir=None
-            ):
+            output_dir=None):
 
         self.__init_logger()
         serialised_trsl = None
         if model is not None:
             # If model is provided for initialisation
-            config = ConfigParser.RawConfigParser()
-            if len(config.read(model)) > 0:
-                set_filename = config.get('Trsl', 'set_filename')
-                serialised_trsl = config.get('Trsl', 'serialised_trsl')
-            else:
-                # If model file is empty
-                self.logger.error("Error Model file corrupted")
-                return None
+            serialised_trsl = model
         else:
             # If model is not provided for initialisation
             if corpus is None:
@@ -122,7 +114,9 @@ class Trsl(object):
         self.serialised_trsl = serialised_trsl
         self.word_ngram_table = None
         if output_dir is None and model is None:
-            self.output_dir = "./trsl/data/models/" + self.filename.split("/")[-1]+"-model/"
+            self.output_dir = (
+                "./data/models/" + self.filename.split("/")[-1] + "-model/"
+            )
         else:
             self.output_dir = output_dir
         self.__train()
@@ -162,10 +156,12 @@ class Trsl(object):
         """
 
         if self.__is_set_building_required():
-            selfvalues = dict(fname=self.filename, w2v_path=self.word2vec_model_path,
-                              wordsets=self.no_of_words_set, clusters=self.no_of_clusters)
+            selfvalues = dict(
+                fname=self.filename, w2v_path=self.word2vec_model_path,
+                wordsets=self.no_of_words_set, clusters=self.no_of_clusters
+            )
 
-            scripts_folder = os.path.join(os.curdir,'trsl/trsl/sets/')
+            scripts_folder = os.path.join(os.curdir, 'trsl/sets/')
             preproc = os.path.join(scripts_folder, "preprocess_sets.py")
             word2vec = os.path.join(scripts_folder, "word_vectorizer.py")
             setbuild = os.path.join(scripts_folder, "set_building.py")
@@ -202,10 +198,10 @@ class Trsl(object):
                 "Set building operation failed"
             )
 
-            # Remove intermediate temp files, 
+            # Remove intermediate temp files,
             # frequency based sorted vocabulary and vectors for the vocabulary
-            os.remove("%(fname)s-sorted" %selfvalues)
-            os.remove("%(fname)s-vectors" %selfvalues)
+            os.remove("%(fname)s-sorted"%selfvalues)
+            os.remove("%(fname)s-vectors"%selfvalues)
 
     def __is_trsl_computed(self):
         """
@@ -253,7 +249,6 @@ class Trsl(object):
             # if model file does not exists
             except (OSError, IOError) as e:
                 self.logger.error("""
-                    Serialised json file specified in the model missing,
                     precomputed trsl model could not be loaded :
                 """ + str(e))
                 return -1
@@ -314,15 +309,7 @@ class Trsl(object):
 
             if not os.path.exists(file_path):
                 os.makedirs(file_path)
-            self.__serialize(file_path + "serialised_trsl.json")
-            config = ConfigParser.RawConfigParser()
-            config.add_section('Trsl')
-            config.set(
-                'Trsl', 'serialised_trsl', file_path + 'serialised_trsl.json'
-            )
-            config.set('Trsl', 'set_filename', self.set_filename)
-            with open(file_path + 'model', 'w') as model:
-                config.write(model)
+            self.__serialize(file_path + "model")
 
     def __split_node(self, node_to_split):
         """

@@ -11,13 +11,10 @@
 """
 
 import argparse
-import inspect
 import logging
-import os
-import sys
 import unittest
 
-from ..trsl.trsl import Trsl
+from trsl.trsl import Trsl
 
 
 class TrslTestCase(unittest.TestCase):
